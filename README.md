@@ -54,5 +54,5 @@ The dashboard expects CSV files with the following structure:
 This project is part of research into Urban Air Mobility (UAM) airspace design and simulation using Bluesky air traffic simulator.
 
 ---
-
+**Author**: Lucas Orbolato Carvalho
 **Status**: Active Development 🚀
