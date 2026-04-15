@@ -1,0 +1,3298 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>UAM Airspace Dashboard - 3D Corridor Designer</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@r128/examples/js/renderers/CSS3DRenderer.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css" />
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: #f3f4f6;
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        .container {
+            display: flex;
+            height: 100vh;
+        }
+
+        .sidebar {
+            width: 384px;
+            background: white;
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .sidebar-header {
+            padding: 1rem;
+            border-bottom: 1px solid #e5e7eb;
+            background: white;
+            flex-shrink: 0;
+        }
+
+        .sidebar-header h1 {
+            font-size: 1.5rem;
+            font-weight: bold;
+            color: #1f2937;
+        }
+
+        .sidebar-header p {
+            font-size: 0.875rem;
+            color: #4b5563;
+        }
+
+        .sidebar-content {
+            padding: 1rem;
+            flex: 1;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+        }
+
+        .section-title {
+            font-size: 0.875rem;
+            font-weight: 500;
+            color: #374151;
+            margin-bottom: 0.5rem;
+        }
+
+        .file-input-wrapper {
+            position: relative;
+            display: inline-block;
+            width: 100%;
+        }
+
+        .file-input-wrapper input[type="file"] {
+            width: 100%;
+            padding: 0.5rem;
+            border: 1px solid #d1d5db;
+            border-radius: 0.375rem;
+            font-size: 0.875rem;
+            color: #6b7280;
+        }
+
+        .routes-list {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+
+        .routes-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 0.5rem;
+        }
+
+        .route-item {
+            padding: 0.5rem;
+            border: 1px solid #d1d5db;
+            border-radius: 0.375rem;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .route-item:hover {
+            background: #f9fafb;
+        }
+
+        .route-item.selected {
+            border-color: #3b82f6;
+            background: #eff6ff;
+        }
+
+        .route-item-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 0.25rem;
+        }
+
+        .route-item-name {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .route-color-swatch {
+            width: 1rem;
+            height: 1rem;
+            border-radius: 0.25rem;
+        }
+
+        .route-item-name span {
+            font-size: 0.875rem;
+            font-weight: 500;
+        }
+
+        .route-item-info {
+            font-size: 0.75rem;
+            color: #6b7280;
+            margin-top: 0.25rem;
+        }
+
+        .button {
+            padding: 0.5rem 0.75rem;
+            border: none;
+            border-radius: 0.375rem;
+            cursor: pointer;
+            font-size: 0.875rem;
+            font-weight: 500;
+            transition: background-color 0.2s;
+        }
+
+        .button-primary {
+            background: #3b82f6;
+            color: white;
+        }
+
+        .button-primary:hover {
+            background: #2563eb;
+        }
+
+        .button-success {
+            background: #10b981;
+            color: white;
+            width: 100%;
+        }
+
+        .button-success:hover {
+            background: #059669;
+        }
+
+        .button-danger {
+            background: #ef4444;
+            color: white;
+            width: 100%;
+        }
+
+        .button-danger:hover {
+            background: #dc2626;
+        }
+
+        .button-purple {
+            background: #a855f7;
+            color: white;
+            flex: 1;
+            padding: 0.5rem;
+            font-size: 0.75rem;
+        }
+
+        .button-purple:hover {
+            background: #9333ea;
+        }
+
+        .button-small {
+            padding: 0.25rem 0.5rem;
+            font-size: 0.75rem;
+        }
+
+        .button-icon {
+            width: 1.5rem;
+            height: 1.5rem;
+            padding: 0.25rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: #3b82f6;
+            color: white;
+            border-radius: 0.25rem;
+            cursor: pointer;
+        }
+
+        .button-icon:hover {
+            background: #2563eb;
+        }
+
+        .form-group {
+            display: flex;
+            flex-direction: column;
+            gap: 0.25rem;
+        }
+
+        .form-label {
+            font-size: 0.875rem;
+            font-weight: 500;
+            color: #374151;
+        }
+
+        .form-input {
+            padding: 0.5rem;
+            border: 1px solid #d1d5db;
+            border-radius: 0.375rem;
+            font-size: 0.875rem;
+        }
+
+        .form-input:focus {
+            outline: none;
+            border-color: #3b82f6;
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+        }
+
+        .route-editor {
+            border-top: 1px solid #e5e7eb;
+            padding-top: 1rem;
+        }
+
+        .waypoints-list {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+            max-height: 240px;
+            overflow-y: auto;
+        }
+
+        .waypoint-item {
+            padding: 0.5rem;
+            background: #f9fafb;
+            border-radius: 0.375rem;
+            font-size: 0.875rem;
+        }
+
+        .waypoint-name {
+            font-weight: 500;
+            margin-bottom: 0.25rem;
+        }
+
+        .waypoint-coords {
+            color: #6b7280;
+            font-size: 0.75rem;
+        }
+
+        .parallel-corridor-buttons {
+            display: flex;
+            gap: 0.5rem;
+        }
+
+        .export-button {
+            width: 100%;
+            background: #3b82f6;
+            color: white;
+            padding: 0.5rem;
+            border: none;
+            border-radius: 0.375rem;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+            font-weight: 500;
+        }
+
+        .export-button:hover {
+            background: #2563eb;
+        }
+
+        .main-view {
+            flex: 1;
+            position: relative;
+            background: white;
+        }
+
+        canvas {
+            width: 100%;
+            height: 100%;
+            display: block;
+        }
+
+        .controls-panel {
+            position: absolute;
+            top: 1rem;
+            right: 1rem;
+            background: white;
+            padding: 0.75rem;
+            border-radius: 0.375rem;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+            font-size: 0.875rem;
+            z-index: 1001;
+            min-width: 220px;
+        }
+
+        .controls-panel-title {
+            font-weight: 500;
+            color: #374151;
+            margin-bottom: 0.5rem;
+        }
+
+        .controls-text {
+            font-size: 0.75rem;
+            color: #6b7280;
+            line-height: 1.5;
+            margin-bottom: 0.5rem;
+        }
+
+        .checkbox-group {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            font-size: 0.875rem;
+        }
+
+        .checkbox-group input[type="checkbox"] {
+            cursor: pointer;
+        }
+
+        .statistics-panel {
+            position: absolute;
+            bottom: 1rem;
+            left: 1rem;
+            background: white;
+            padding: 0.75rem;
+            border-radius: 0.375rem;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+        }
+
+        .statistics-title {
+            font-weight: 500;
+            color: #374151;
+            margin-bottom: 0.5rem;
+            font-size: 0.875rem;
+        }
+
+        .statistics-item {
+            font-size: 0.75rem;
+            color: #6b7280;
+            line-height: 1.5;
+        }
+
+        .scrollbar::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        .scrollbar::-webkit-scrollbar-track {
+            background: #f1f5f9;
+        }
+
+        .scrollbar::-webkit-scrollbar-thumb {
+            background: #cbd5e0;
+            border-radius: 3px;
+        }
+
+        .scrollbar::-webkit-scrollbar-thumb:hover {
+            background: #a0aec0;
+        }
+
+        #map {
+            width: 100%;
+            height: 100%;
+        }
+
+        .view-toggle {
+            position: absolute;
+            top: 1rem;
+            left: 10rem;
+            background: white;
+            border-radius: 0.375rem;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+            display: flex;
+            gap: 0;
+            z-index: 1000;
+        }
+
+        .view-toggle button {
+            padding: 0.5rem 1rem;
+            border: none;
+            background: white;
+            cursor: pointer;
+            font-weight: 500;
+            color: #6b7280;
+            transition: all 0.2s;
+            font-size: 0.875rem;
+        }
+
+        .view-toggle button:first-child {
+            border-radius: 0.375rem 0 0 0.375rem;
+        }
+
+        .view-toggle button:last-child {
+            border-radius: 0 0.375rem 0.375rem 0;
+            border-left: 1px solid #e5e7eb;
+        }
+
+        .view-toggle button.active {
+            background: #3b82f6;
+            color: white;
+        }
+
+        .view-toggle button:hover:not(.active) {
+            background: #f9fafb;
+        }
+
+        .grid-size-slider {
+            width: 100%;
+            height: 6px;
+            border-radius: 3px;
+            background: #d1d5db;
+            outline: none;
+            -webkit-appearance: none;
+            appearance: none;
+            margin-top: 0.5rem;
+        }
+
+        .grid-size-slider::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 16px;
+            height: 16px;
+            border-radius: 50%;
+            background: #3b82f6;
+            cursor: pointer;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+        }
+
+        .grid-size-slider::-moz-range-thumb {
+            width: 16px;
+            height: 16px;
+            border-radius: 50%;
+            background: #3b82f6;
+            cursor: pointer;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+            border: none;
+        }
+
+        .grid-size-container {
+            display: flex;
+            flex-direction: column;
+            gap: 0.25rem;
+        }
+
+        .grid-size-label {
+            font-size: 0.75rem;
+            color: #6b7280;
+            display: flex;
+            justify-content: space-between;
+        }
+
+        /* Modal Styles */
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 2000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.5);
+        }
+
+        .modal.active {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .modal-content {
+            background-color: white;
+            padding: 2rem;
+            border-radius: 0.5rem;
+            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
+            max-width: 600px;
+            max-height: 90vh;
+            overflow-y: auto;
+            width: 90%;
+        }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1.5rem;
+            border-bottom: 1px solid #e5e7eb;
+            padding-bottom: 1rem;
+        }
+
+        .modal-header h2 {
+            font-size: 1.5rem;
+            font-weight: 600;
+            color: #1f2937;
+            margin: 0;
+        }
+
+        .modal-close {
+            background: none;
+            border: none;
+            font-size: 1.5rem;
+            cursor: pointer;
+            color: #6b7280;
+        }
+
+        .modal-close:hover {
+            color: #1f2937;
+        }
+
+        .offset-fields-container {
+            display: flex;
+            flex-direction: column;
+            gap: 0.75rem;
+            margin-bottom: 1rem;
+            max-height: 300px;
+            overflow-y: auto;
+            padding: 0.5rem;
+            background: #f9fafb;
+            border-radius: 0.375rem;
+            border: 1px solid #e5e7eb;
+        }
+
+        .offset-field {
+            display: flex;
+            gap: 1rem;
+            align-items: flex-end;
+        }
+
+        .offset-field-group {
+            display: flex;
+            flex-direction: column;
+            gap: 0.25rem;
+            flex: 1;
+        }
+
+        .offset-field-label {
+            font-size: 0.75rem;
+            font-weight: 500;
+            color: #374151;
+        }
+
+        .offset-field input {
+            padding: 0.5rem;
+            border: 1px solid #d1d5db;
+            border-radius: 0.375rem;
+            font-size: 0.875rem;
+        }
+
+        .remove-offset-btn {
+            width: 2rem;
+            height: 2rem;
+            padding: 0.25rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: #ef4444;
+            color: white;
+            border: none;
+            border-radius: 0.25rem;
+            cursor: pointer;
+            font-size: 1rem;
+        }
+
+        .remove-offset-btn:hover {
+            background: #dc2626;
+        }
+
+        .modal-footer {
+            display: flex;
+            gap: 1rem;
+            justify-content: flex-end;
+            margin-top: 1.5rem;
+            border-top: 1px solid #e5e7eb;
+            padding-top: 1rem;
+        }
+
+        .button-modal {
+            padding: 0.5rem 1rem;
+            border: none;
+            border-radius: 0.375rem;
+            cursor: pointer;
+            font-size: 0.875rem;
+            font-weight: 500;
+            transition: background-color 0.2s;
+        }
+
+        .button-modal-cancel {
+            background: #e5e7eb;
+            color: #374151;
+        }
+
+        .button-modal-cancel:hover {
+            background: #d1d5db;
+        }
+
+        .button-modal-submit {
+            background: #3b82f6;
+            color: white;
+        }
+
+        .button-modal-submit:hover {
+            background: #2563eb;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Sidebar -->
+        <div class="sidebar scrollbar">
+            <div class="sidebar-header">
+                <h1>UAM Airspace</h1>
+                <p>3D Corridor Designer</p>
+                <div style="display: flex; gap: 0.5rem; margin-top: 0.75rem;">
+                    <button id="unitMetersBtn" class="unit-btn active" style="flex: 1; padding: 0.4rem; background: #3b82f6; color: white; border: 1px solid #2563eb; border-radius: 0.25rem; cursor: pointer; font-size: 0.75rem; font-weight: 500;">Meters</button>
+                    <button id="unitFeetBtn" class="unit-btn" style="flex: 1; padding: 0.4rem; background: #e5e7eb; color: #374151; border: 1px solid #d1d5db; border-radius: 0.25rem; cursor: pointer; font-size: 0.75rem; font-weight: 500;">Feet</button>
+                </div>
+            </div>
+
+            <div class="sidebar-content">
+                <!-- File Upload -->
+                <div>
+                    <label class="section-title">Load Routes from CSV</label>
+                    <div class="file-input-wrapper">
+                        <input type="file" id="csvFile" accept=".csv">
+                    </div>
+                </div>
+
+                <!-- Load Trajectories for 2D Map -->
+                <div>
+                    <label class="section-title">Load Trajectories (2D Map Only)</label>
+                    <div class="file-input-wrapper">
+                        <input type="file" id="trajectoryFile" accept=".csv">
+                    </div>
+                </div>
+
+                <!-- Vertiports List -->
+                <div>
+                    <div class="routes-header">
+                        <label class="section-title">Vertiports (<span id="vertiportCount">0</span>)</label>
+                        <div style="display: flex; gap: 0.25rem;">
+                            <button class="button-icon" id="toggleAllVertiportsBtn" title="Show/Hide all vertiports">
+                                👁️
+                            </button>
+                            <button class="button-icon" id="addVertiportBtn" title="Add new vertiport">
+                                ➕
+                            </button>
+                        </div>
+                    </div>
+                    <div class="routes-list" id="vertiportsList"></div>
+                </div>
+
+                <!-- Vertiport Editor (shown when vertiport is selected) -->
+                <div id="vertiportEditor" style="display: none;">
+                    <div class="route-editor">
+                        <h3 style="font-size: 1.125rem; font-weight: 600; margin-bottom: 0.75rem;">Edit Vertiport</h3>
+                        
+                        <div class="form-group" style="margin-bottom: 0.75rem;">
+                            <label class="form-label">Vertiport Name</label>
+                            <input type="text" id="vertiportName" class="form-input">
+                        </div>
+
+                        <div class="form-group" style="margin-bottom: 0.75rem;">
+                            <label class="form-label">Latitude</label>
+                            <input type="number" id="vertiportLat" class="form-input" step="0.0001">
+                        </div>
+
+                        <div class="form-group" style="margin-bottom: 0.75rem;">
+                            <label class="form-label">Longitude</label>
+                            <input type="number" id="vertiportLon" class="form-input" step="0.0001">
+                        </div>
+
+                        <div class="form-group" style="margin-bottom: 0.75rem;">
+                            <label class="form-label" for="vertiportRadius">Radius (m)</label>
+                            <input type="number" id="vertiportRadius" class="form-input" min="1" step="1">
+                        </div>
+
+                        <div class="form-group" style="margin-bottom: 0.75rem;">
+                            <label class="form-label" for="vertiportHeight">Height (m)</label>
+                            <input type="number" id="vertiportHeight" class="form-input" min="1" step="1">
+                        </div>
+
+                        <div class="form-group" style="margin-bottom: 0.75rem;">
+                            <label class="form-label">Type</label>
+                            <input type="text" id="vertiportType" class="form-input" placeholder="e.g., Heliport, Vertiport">
+                        </div>
+
+                        <button class="button-danger" id="deleteVertiportBtn">Delete Vertiport</button>
+                    </div>
+                </div>
+
+                <!-- Routes List -->
+                <div>
+                    <div class="routes-header">
+                        <label class="section-title">Routes (<span id="routeCount">0</span>)</label>
+                        <div style="display: flex; gap: 0.25rem;">
+                            <button class="button-icon" id="toggleAllRoutesBtn" title="Show/Hide all routes">
+                                👁️
+                            </button>
+                            <button class="button-icon" id="addRouteBtn" title="Add new route">
+                                ➕
+                            </button>
+                        </div>
+                    </div>
+                    <div class="routes-list" id="routesList"></div>
+                </div>
+
+                <!-- Route Editor (shown when route is selected) -->
+                <div id="routeEditor" style="display: none;">
+                    <div class="route-editor">
+                        <h3 style="font-size: 1.125rem; font-weight: 600; margin-bottom: 0.75rem;">Edit Route</h3>
+                        
+                        <div class="form-group" style="margin-bottom: 0.75rem;">
+                            <label class="form-label">Route Name</label>
+                            <input type="text" id="routeName" class="form-input">
+                        </div>
+
+                        <div class="form-group" style="margin-bottom: 0.75rem;">
+                            <label class="form-label" for="routeAltitude">Altitude (m)</label>
+                            <input type="number" id="routeAltitude" class="form-input" step="1" readonly style="background-color: #f3f4f6; color: #6b7280;">
+                        </div>
+
+                        <div class="form-group" style="margin-bottom: 0.75rem;">
+                            <label class="form-label" for="routeCorridorWidth">Corridor Width (Mean - m)</label>
+                            <input type="number" id="routeCorridorWidth" class="form-input" step="1" readonly style="background-color: #f3f4f6; color: #6b7280;">
+                        </div>
+
+                        <div class="form-group" style="margin-bottom: 0.75rem;">
+                            <label class="form-label" for="routeCorridorHeight">Corridor Height (Mean - m)</label>
+                            <input type="number" id="routeCorridorHeight" class="form-input" step="1" readonly style="background-color: #f3f4f6; color: #6b7280;">
+                        </div>
+
+                        <div class="form-group" style="margin-bottom: 0.75rem;">
+                            <label class="form-label">Waypoints</label>
+                            <button class="button-success" id="addWaypointBtn">Add Waypoint</button>
+                            <div class="waypoints-list" id="waypointsList"></div>
+                        </div>
+
+                        <div class="form-group" style="margin-bottom: 0.75rem;">
+                            <label class="form-label">Create Parallel Corridor</label>
+                            <div style="display: flex; gap: 0.5rem; margin-bottom: 0.5rem;">
+                                <div class="form-group" style="flex: 1;">
+                                    <label class="form-label" style="font-size: 0.75rem;" for="horizontalOffset">Horizontal Distance (m)</label>
+                                    <input type="number" id="horizontalOffset" class="form-input" value="500" min="1" step="1">
+                                </div>
+                                <div class="form-group" style="flex: 1;">
+                                    <label class="form-label" style="font-size: 0.75rem;" for="verticalOffset">Vertical Distance (m)</label>
+                                    <input type="number" id="verticalOffset" class="form-input" value="100" min="1" step="1">
+                                </div>
+                            </div>
+                            <div class="parallel-corridor-buttons">
+                                <button class="button-purple" id="horizontalCorridorBtn">Horizontal</button>
+                                <button class="button-purple" id="verticalCorridorBtn">Vertical</button>
+                            </div>
+                        </div>
+
+                        <button class="button-danger" id="deleteRouteBtn">Delete Route</button>
+                    </div>
+                </div>
+
+                <!-- Batch Parallel Corridors Button -->
+                <div>
+                    <label class="section-title">Batch Operations</label>
+                    <button class="export-button" style="background: #a855f7; margin-bottom: 0.5rem;" id="batchParallelBtn">
+                        🛣️ Generate Parallel Routes
+                    </button>
+                </div>
+
+                <button class="export-button" id="exportBtn">
+                    📥 Export to CSV
+                </button>
+                <button class="export-button" style="background: #ef4444;" id="clearAllBtn">
+                    🗑️ Clear All Objects
+                </button>
+            </div>
+        </div>
+
+        <!-- Batch Parallel Routes Modal -->
+        <div id="batchParallelModal" class="modal">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h2>Generate Parallel Routes for All Routes</h2>
+                    <button class="modal-close" id="closeBatchModal">&times;</button>
+                </div>
+
+                <div class="form-group" style="margin-bottom: 1.5rem;">
+                    <label class="form-label">Number of Parallel Routes</label>
+                    <input type="number" id="numParallelRoutes" class="form-input" value="1" min="1" max="10" step="1">
+                    <p style="font-size: 0.75rem; color: #6b7280; margin-top: 0.25rem;">Specify how many parallel routes to create for each existing route</p>
+                </div>
+
+                <div style="margin-bottom: 1.5rem;">
+                    <label class="form-label" style="margin-bottom: 0.75rem; display: block;">Horizontal Offsets (meters)</label>
+                    <div class="offset-fields-container" id="horizontalOffsetsContainer">
+                        <div class="offset-field">
+                            <div class="offset-field-group">
+                                <label class="offset-field-label">Route 1 Offset</label>
+                                <input type="number" class="horizontal-offset-input" value="500" min="1" step="1">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div style="margin-bottom: 1.5rem;">
+                    <label class="form-label" style="margin-bottom: 0.75rem; display: block;">Vertical Offsets (meters)</label>
+                    <div class="offset-fields-container" id="verticalOffsetsContainer">
+                        <div class="offset-field">
+                            <div class="offset-field-group">
+                                <label class="offset-field-label">Route 1 Offset</label>
+                                <input type="number" class="vertical-offset-input" value="100" min="1" step="1">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="form-group" style="margin-bottom: 1.5rem;">
+                    <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer;">
+                        <input type="checkbox" id="deleteOriginalRoutes" style="width: 1.125rem; height: 1.125rem;">
+                        <span style="font-size: 0.875rem; color: #374151;">Delete original routes after generating parallel routes</span>
+                    </label>
+                </div>
+
+                <div style="background: #fef3c7; border: 1px solid #fcd34d; border-radius: 0.375rem; padding: 0.75rem; margin-bottom: 1.5rem;">
+                    <p style="font-size: 0.875rem; color: #92400e; margin: 0;">
+                        ⚠️ This will create <strong id="totalRoutesCount">0</strong> new parallel routes in total
+                    </p>
+                </div>
+
+                <div class="modal-footer">
+                    <button class="button-modal button-modal-cancel" id="cancelBatchBtn">Cancel</button>
+                    <button class="button-modal button-modal-submit" id="submitBatchBtn">Generate Parallel Routes</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- 3D View -->
+        <div class="main-view">
+            <div class="view-toggle">
+                <button id="view3dBtn" class="active">3D View</button>
+                <button id="viewMapBtn">Map View</button>
+            </div>
+            
+            <div id="mapControls" style="display: none; position: absolute; top: 3.5rem; right: 1rem; z-index: 1000;">
+                <button id="mapTileToggle" class="button" style="background: #3b82f6; color: white; padding: 0.5rem 0.75rem; border-radius: 0.375rem;">⬜ Gray Map (CartoDB)</button>
+            </div>
+            
+            <canvas id="canvas"></canvas>
+            <div id="map" style="display: none;"></div>
+            
+            <div class="controls-panel" id="viewControls3D">
+                <div class="controls-panel-title">View Controls</div>
+                <div class="controls-text">
+                    • Drag to rotate<br>
+                    • Shift+Drag to pan<br>
+                    • Scroll to zoom
+                </div>
+                <label class="checkbox-group">
+                    <input type="checkbox" id="gridToggle" checked>
+                    <span>Show Grid</span>
+                </label>
+                <label class="checkbox-group">
+                    <input type="checkbox" id="solidVolumesToggle">
+                    <span>Solid Volumes</span>
+                </label>
+                <label class="checkbox-group">
+                    <input type="checkbox" id="showNodesToggle3D" checked>
+                    <span>Show Nodes</span>
+                </label>
+                <div class="grid-size-container">
+                    <div class="grid-size-label">
+                        <span>Grid Size</span>
+                        <span id="gridSizeValue">100 m</span>
+                    </div>
+                    <input type="range" id="gridSizeSlider" class="grid-size-slider" min="25" max="500" step="25" value="100">
+                </div>
+            </div>
+
+            <div class="controls-panel" id="mapControls3D" style="display: none; top: 8.5rem;">
+                <div class="controls-panel-title">Map Controls</div>
+                <label class="checkbox-group">
+                    <input type="checkbox" id="volumeProjectionToggle">
+                    <span>Show Corridor Volumes</span>
+                </label>
+                <label class="checkbox-group">
+                    <input type="checkbox" id="showNodesToggle" checked>
+                    <span>Show Nodes</span>
+                </label>
+            </div>
+
+            <div class="statistics-panel">
+                <div class="statistics-title">Statistics</div>
+                <div class="statistics-item">Routes: <span id="statRoutes">0</span></div>
+                <div class="statistics-item">Vertiports: <span id="statVertiports">0</span></div>
+                <div class="statistics-item">Total Waypoints: <span id="statWaypoints">0</span></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // State management
+        const state = {
+            routes: [],
+            selectedRouteId: null,
+            vertiports: new Map(),
+            selectedVertiportName: null,
+            showGrid: true,
+            gridCellSize: 100, // Grid cell size in units
+            currentView: '3d',
+            unit: 'meters', // 'meters' or 'feet'
+            editingFieldId: null, // Track which input field is currently being edited
+            draggedWaypointIndex: null, // Track dragged waypoint for reordering
+            solidVolumes: false, // Toggle between transparent (0.2) and solid (0.8) corridor volumes
+            showVolumeProjection: false, // Show volume projections in 2D map instead of centerlines
+            showNodes: true, // Show/hide waypoint nodes
+            trajectories: [], // Array of loaded trajectories for 2D map display
+            allRoutesVisible: true, // Track if all routes are currently visible
+            allVertiportsVisible: true // Track if all vertiports are currently visible
+        };
+
+        // Three.js variables
+        let scene, camera, renderer, cssRenderer, gridHelper;
+        let cameraTarget, cameraDistance, cameraYaw, cameraPitch;
+        const canvasElement = document.getElementById('canvas');
+        
+        // Leaflet map variable
+        let map2D = null;
+        const mapElement = document.getElementById('map');
+
+        // Unit conversion functions
+        function metersToFeet(meters) {
+            return Math.round(meters * 3.28084); // Return whole number
+        }
+
+        function feetToMeters(feet) {
+            return Math.round(feet / 3.28084); // Return whole number
+        }
+
+        function formatDistance(meters) {
+            if (state.unit === 'feet') {
+                return metersToFeet(meters) + ' ft';
+            }
+            return meters + ' m';
+        }
+
+        function getDisplayValue(meters) {
+            if (state.unit === 'feet') {
+                return metersToFeet(meters);
+            }
+            return meters;
+        }
+
+        function getDisplayUnit() {
+            return state.unit === 'feet' ? 'ft' : 'm';
+        }
+
+        // Create a solid green texture for the map
+        function createMapTexture() {
+            const canvas = document.createElement('canvas');
+            const size = 256;
+            canvas.width = size;
+            canvas.height = size;
+            const ctx = canvas.getContext('2d');
+
+            // Solid green background
+            ctx.fillStyle = '#22c55e';
+            ctx.fillRect(0, 0, size, size);
+
+            return new THREE.CanvasTexture(canvas);
+        }
+
+        // Calculate bounding box of all routes and vertiports
+        function calculateSceneBounds() {
+            let minX = Infinity, maxX = -Infinity;
+            let minZ = Infinity, maxZ = -Infinity;
+
+            // Check vertiports
+            state.vertiports.forEach((vertiport) => {
+                const pos = latLonToXYZ(vertiport.lat, vertiport.lon, 0);
+                const padding = vertiport.radius + 500;
+                minX = Math.min(minX, pos.x - padding);
+                maxX = Math.max(maxX, pos.x + padding);
+                minZ = Math.min(minZ, pos.z - padding);
+                maxZ = Math.max(maxZ, pos.z + padding);
+            });
+
+            // Check routes
+            state.routes.forEach(route => {
+                route.waypoints.forEach(wp => {
+                    const pos = latLonToXYZ(wp.lat, wp.lon, 0);
+                    const padding = 500;
+                    minX = Math.min(minX, pos.x - padding);
+                    maxX = Math.max(maxX, pos.x + padding);
+                    minZ = Math.min(minZ, pos.z - padding);
+                    maxZ = Math.max(maxZ, pos.z + padding);
+                });
+            });
+
+            // If no routes or vertiports, use default bounds
+            if (!isFinite(minX)) {
+                minX = -10000;
+                maxX = 10000;
+                minZ = -10000;
+                maxZ = 10000;
+            }
+
+            const width = maxX - minX;
+            const height = maxZ - minZ;
+            const centerX = (minX + maxX) / 2;
+            const centerZ = (minZ + maxZ) / 2;
+
+            return { width, height, centerX, centerZ, minX, maxX, minZ, maxZ };
+        }
+
+        // Create map ground plane with dynamic size
+        function createMapPlane() {
+            const bounds = calculateSceneBounds();
+            const size = Math.max(bounds.width, bounds.height) * 2.0; // Add 100% padding to prevent disappearing at zoom
+
+            const texture = createMapTexture();
+            const geometry = new THREE.PlaneGeometry(size, size);
+            const material = new THREE.MeshLambertMaterial({ 
+                map: texture,
+                side: THREE.DoubleSide
+            });
+            const plane = new THREE.Mesh(geometry, material);
+            plane.rotation.x = -Math.PI / 2;
+            plane.position.set(bounds.centerX, 0, bounds.centerZ);
+            plane.userData.isMap = true;
+            plane.userData.bounds = bounds;
+            return plane;
+        }
+
+        // Update map plane size dynamically
+        function updateMapPlane() {
+            const mapPlane = scene.children.find(child => child.userData && child.userData.isMap);
+            if (!mapPlane) return;
+
+            const bounds = calculateSceneBounds();
+            const size = Math.max(bounds.width, bounds.height) * 2.0;
+
+            mapPlane.geometry.dispose();
+            mapPlane.geometry = new THREE.PlaneGeometry(size, size);
+            mapPlane.position.set(bounds.centerX, 0, bounds.centerZ);
+            mapPlane.userData.bounds = bounds;
+            
+            // Update grid to match the new plane size
+            updateGrid();
+        }
+
+        // Initialize Three.js with map plane
+        function initThreeJS() {
+            scene = new THREE.Scene();
+            scene.background = new THREE.Color(0x87ceeb);
+
+            camera = new THREE.PerspectiveCamera(
+                60,
+                canvasElement.clientWidth / canvasElement.clientHeight,
+                1,
+                500000
+            );
+            camera.position.set(5000, 3000, 5000);
+            camera.lookAt(0, 0, 0);
+
+            // Initialize camera spherical coordinates from starting position
+            cameraTarget = new THREE.Vector3(0, 0, 0);
+            const initialDist = camera.position.length();
+            cameraDistance = initialDist;
+            cameraYaw = Math.atan2(camera.position.x, camera.position.z);
+            cameraPitch = Math.acos(camera.position.y / initialDist);
+
+            // WebGL renderer for 3D objects
+            renderer = new THREE.WebGLRenderer({ canvas: canvasElement, antialias: true, alpha: true });
+            renderer.setSize(canvasElement.clientWidth, canvasElement.clientHeight);
+            renderer.setClearColor(0x87ceeb, 1);
+
+            // Lighting
+            const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
+            scene.add(ambientLight);
+            const directionalLight = new THREE.DirectionalLight(0xffffff, 0.8);
+            directionalLight.position.set(1000, 2000, 1000);
+            scene.add(directionalLight);
+
+            // Create the map ground plane
+            const mapPlane = createMapPlane();
+            scene.add(mapPlane);
+
+            // Grid
+            updateGrid();
+            updateGrid();
+
+            // Camera controls
+            let isDragging = false;
+            let previousMousePosition = { x: 0, y: 0 };
+            const keyState = {
+                ArrowUp: false,
+                ArrowDown: false,
+                ArrowLeft: false,
+                ArrowRight: false
+            };
+
+            // Keyboard controls for camera panning
+            document.addEventListener('keydown', (e) => {
+                if (e.key in keyState) {
+                    keyState[e.key] = true;
+                }
+            });
+
+            document.addEventListener('keyup', (e) => {
+                if (e.key in keyState) {
+                    keyState[e.key] = false;
+                }
+            });
+
+            canvasElement.addEventListener('mousedown', (e) => {
+                isDragging = true;
+                previousMousePosition = { x: e.clientX, y: e.clientY };
+            });
+
+            canvasElement.addEventListener('mousemove', (e) => {
+                if (!isDragging) return;
+
+                const deltaX = e.clientX - previousMousePosition.x;
+                const deltaY = e.clientY - previousMousePosition.y;
+
+                if (e.shiftKey) {
+                    // Shift+drag = pan camera and target together
+                    const forward = new THREE.Vector3();
+                    const right = new THREE.Vector3();
+                    camera.getWorldDirection(forward);
+                    forward.y = 0;
+                    forward.normalize();
+                    right.crossVectors(new THREE.Vector3(0, 1, 0), forward).normalize();
+                    
+                    cameraTarget.addScaledVector(right, -deltaX * 5);
+                    cameraTarget.addScaledVector(forward, deltaY * 5);
+                } else {
+                    // Normal drag = rotate around target point
+                    cameraYaw -= deltaX * 0.01;
+                    cameraPitch = Math.max(0.1, Math.min(Math.PI - 0.1, cameraPitch - deltaY * 0.01));
+                }
+
+                previousMousePosition = { x: e.clientX, y: e.clientY };
+            });
+
+            canvasElement.addEventListener('mouseup', () => {
+                isDragging = false;
+            });
+
+            canvasElement.addEventListener('wheel', (e) => {
+                e.preventDefault();
+                // Adjust distance from target for zoom
+                const zoomFactor = e.deltaY > 0 ? 1.1 : 0.9;
+                cameraDistance = Math.max(500, Math.min(100000, cameraDistance * zoomFactor));
+            });
+
+            window.addEventListener('resize', () => {
+                camera.aspect = canvasElement.clientWidth / canvasElement.clientHeight;
+                camera.updateProjectionMatrix();
+                renderer.setSize(canvasElement.clientWidth, canvasElement.clientHeight);
+            });
+
+            // Animation loop
+            function animate() {
+                // Handle keyboard arrow key panning - moves camera and target together
+                const isArrowPressed = keyState.ArrowUp || keyState.ArrowDown || keyState.ArrowLeft || keyState.ArrowRight;
+                
+                if (!isDragging && isArrowPressed) {
+                    const panSpeed = 100;
+                    const forward = new THREE.Vector3();
+                    const right = new THREE.Vector3();
+                    
+                    camera.getWorldDirection(forward);
+                    forward.y = 0;
+                    forward.normalize();
+                    right.crossVectors(new THREE.Vector3(0, 1, 0), forward).normalize();
+                    
+                    if (keyState.ArrowUp) {
+                        camera.position.addScaledVector(forward, panSpeed);
+                        cameraTarget.addScaledVector(forward, panSpeed);
+                    }
+                    if (keyState.ArrowDown) {
+                        camera.position.addScaledVector(forward, -panSpeed);
+                        cameraTarget.addScaledVector(forward, -panSpeed);
+                    }
+                    if (keyState.ArrowLeft) {
+                        camera.position.addScaledVector(right, panSpeed);
+                        cameraTarget.addScaledVector(right, panSpeed);
+                    }
+                    if (keyState.ArrowRight) {
+                        camera.position.addScaledVector(right, -panSpeed);
+                        cameraTarget.addScaledVector(right, -panSpeed);
+                    }
+                    
+                    // Keep spherical coords in sync with camera position when panning
+                    const relativePos = new THREE.Vector3(
+                        camera.position.x - cameraTarget.x,
+                        camera.position.y - cameraTarget.y,
+                        camera.position.z - cameraTarget.z
+                    );
+                    cameraDistance = relativePos.length();
+                    cameraYaw = Math.atan2(relativePos.x, relativePos.z);
+                    cameraPitch = Math.acos(Math.max(-1, Math.min(1, relativePos.y / cameraDistance)));
+                } else if (isDragging) {
+                    // Update camera position based on yaw/pitch around target when dragging
+                    camera.position.x = cameraTarget.x + cameraDistance * Math.sin(cameraYaw) * Math.sin(cameraPitch);
+                    camera.position.z = cameraTarget.z + cameraDistance * Math.cos(cameraYaw) * Math.sin(cameraPitch);
+                    camera.position.y = Math.max(100, cameraTarget.y + cameraDistance * Math.cos(cameraPitch));
+                } else {
+                    // Not dragging and no arrows pressed - just update position from spherical coords (for zoom to work)
+                    camera.position.x = cameraTarget.x + cameraDistance * Math.sin(cameraYaw) * Math.sin(cameraPitch);
+                    camera.position.z = cameraTarget.z + cameraDistance * Math.cos(cameraYaw) * Math.sin(cameraPitch);
+                    camera.position.y = Math.max(100, cameraTarget.y + cameraDistance * Math.cos(cameraPitch));
+                }
+                
+                camera.lookAt(cameraTarget);
+
+                requestAnimationFrame(animate);
+                renderer.render(scene, camera);
+            }
+            animate();
+        }
+
+        // Initialize Leaflet map for 2D view
+        function initMap() {
+            if (map2D) return;
+
+            map2D = L.map(mapElement).setView([-23.55, -46.63], 11);
+
+            // Default tile layer (color)
+            map2D.colorTileLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
+                maxZoom: 19,
+                maxNativeZoom: 18
+            }).addTo(map2D);
+            
+            // Gray tile layer
+            map2D.grayTileLayer = L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}.png', {
+                attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>, &copy; <a href="https://carto.com/attributions">CARTO</a>',
+                maxZoom: 19,
+                maxNativeZoom: 18
+            });
+            
+            map2D.currentTileLayer = 'color';
+
+            // Store map layers for easy management
+            map2D.routeMarkers = L.featureGroup().addTo(map2D);
+            map2D.vertiportMarkers = L.featureGroup().addTo(map2D);
+            map2D.routeLines = L.featureGroup().addTo(map2D);
+
+            // Resize map when container changes
+            setTimeout(() => map2D.invalidateSize(), 100);
+        }
+
+        // Toggle tile layers in 2D map
+        function switchMapTileLayer() {
+            if (map2D.currentTileLayer === 'color') {
+                map2D.removeLayer(map2D.colorTileLayer);
+                map2D.addLayer(map2D.grayTileLayer);
+                map2D.currentTileLayer = 'gray';
+                document.getElementById('mapTileToggle').textContent = '🎨 Color Map (OpenStreetMap)';
+            } else {
+                map2D.removeLayer(map2D.grayTileLayer);
+                map2D.addLayer(map2D.colorTileLayer);
+                map2D.currentTileLayer = 'color';
+                document.getElementById('mapTileToggle').textContent = '⬜ Gray Map (CartoDB)';
+            }
+        }
+
+        // Helper function to convert degrees to kilometers
+        function degreesToKm(degrees) {
+            return degrees * 111.32; // 1 degree ≈ 111.32 km
+        }
+
+        // Helper function to calculate bearing between two points
+        function calculateBearing(lat1, lon1, lat2, lon2) {
+            const dLon = lon2 - lon1;
+            const y = Math.sin(dLon * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180);
+            const x = Math.cos(lat1 * Math.PI / 180) * Math.sin(lat2 * Math.PI / 180) -
+                      Math.sin(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * Math.cos(dLon * Math.PI / 180);
+            return Math.atan2(y, x) * 180 / Math.PI;
+        }
+
+        // Helper function to offset a point by distance and bearing
+        function offsetPoint(lat, lon, distanceKm, bearingDegrees) {
+            const R = 6371; // Earth's radius in km
+            const latRad = lat * Math.PI / 180;
+            const lonRad = lon * Math.PI / 180;
+            const bearingRad = bearingDegrees * Math.PI / 180;
+            const distRad = distanceKm / R;
+
+            const newLatRad = Math.asin(
+                Math.sin(latRad) * Math.cos(distRad) +
+                Math.cos(latRad) * Math.sin(distRad) * Math.cos(bearingRad)
+            );
+            const newLonRad = lonRad + Math.atan2(
+                Math.sin(bearingRad) * Math.sin(distRad) * Math.cos(latRad),
+                Math.cos(distRad) - Math.sin(latRad) * Math.sin(newLatRad)
+            );
+            return [newLatRad * 180 / Math.PI, newLonRad * 180 / Math.PI];
+        }
+
+        // Update map with routes and vertiports
+        function updateMap() {
+            if (state.currentView !== 'map' || !map2D) {
+                return;
+            }
+
+            // Clear existing markers and lines
+            if (map2D.routeMarkers) map2D.routeMarkers.clearLayers();
+            if (map2D.vertiportMarkers) map2D.vertiportMarkers.clearLayers();
+            if (map2D.routeLines) map2D.routeLines.clearLayers();
+
+            // Add trajectories first (so they appear under routes)
+            if (state.trajectories && state.trajectories.length > 0) {
+                state.trajectories.forEach((trajectory, trajIdx) => {
+                    const latlngs = trajectory.points ? trajectory.points.map(p => [p.lat, p.lon]) : [];
+                    
+                    if (latlngs.length > 0) {
+                        // Draw trajectory line in black with low thickness
+                        const polyline = L.polyline(latlngs, {
+                            color: '#000000',
+                            weight: 0.8,
+                            opacity: 0.5
+                        }).bindPopup(`<b>${trajectory.name || 'Trajectory ' + (trajIdx + 1)}</b>`);
+                        
+                        if (map2D.routeLines) map2D.routeLines.addLayer(polyline);
+                    }
+                });
+            }
+
+            // Add vertiports (draggable)
+            if (state.vertiports && state.vertiports.size > 0) {
+                state.vertiports.forEach((vertiport, name) => {
+                    if (!vertiport.visible) return;
+                    
+                    // Create a custom icon for vertiports
+                    const icon = L.divIcon({
+                        className: 'vertiport-marker',
+                        html: '<div style="width: 16px; height: 16px; background: #4444ff; border: 2px solid #2222dd; border-radius: 50%; cursor: grab; display: flex; align-items: center; justify-content: center;"></div>',
+                        iconSize: [16, 16],
+                        iconAnchor: [8, 8]
+                    });
+                    
+                    const marker = L.marker([vertiport.lat, vertiport.lon], {
+                        icon: icon,
+                        draggable: true,
+                        title: name
+                    }).bindPopup(`<b>${name}</b><br>${vertiport.type}`);
+                    
+                    // Store vertiport name in marker for reference
+                    marker.vertiportName = name;
+                    marker.vertiportData = vertiport;
+                    
+                    // Drag event handlers
+                    marker.on('dragstart', function() {
+                        this.setOpacity(0.6);
+                    });
+                    
+                    marker.on('drag', function() {
+                        const latlng = this.getLatLng();
+                        this.setPopupContent(`<b>${name}</b><br>Lat: ${latlng.lat.toFixed(6)}<br>Lon: ${latlng.lng.toFixed(6)}<br><em>(Dragging...)</em>`);
+                    });
+                    
+                    marker.on('dragend', function() {
+                        const latlng = this.getLatLng();
+                        // Update the vertiport data
+                        const updatedVertiport = {...vertiport, lat: latlng.lat, lon: latlng.lng};
+                        state.vertiports.set(name, updatedVertiport);
+                        this.setOpacity(1);
+                        this.setPopupContent(`<b>${name}</b><br>${vertiport.type}<br><small>Updated: Lat ${latlng.lat.toFixed(6)}, Lon ${latlng.lng.toFixed(6)}</small>`);
+                        this.openPopup();
+                        
+                        // Refresh the map and 3D view
+                        updateMap();
+                        renderScene();
+                    });
+                    
+                    if (map2D.vertiportMarkers) map2D.vertiportMarkers.addLayer(marker);
+                });
+            }
+
+            // Add routes
+            if (state.routes && state.routes.length > 0) {
+                state.routes.forEach(route => {
+                    if (!route.visible || !route.waypoints || route.waypoints.length < 2) return;
+
+                    const latlngs = route.waypoints.map(wp => [wp.lat, wp.lon]);
+                    
+                    // Extract color from THREE.Color object
+                    let colorStr = '#0066cc'; // default color
+                    if (route.color) {
+                        const r = Math.round(route.color.r * 255);
+                        const g = Math.round(route.color.g * 255);
+                        const b = Math.round(route.color.b * 255);
+                        colorStr = `rgb(${r}, ${g}, ${b})`;
+                    }
+                    const displayAltitude = getDisplayValue(getRouteAltitude(route));
+                    const unit = getDisplayUnit();
+
+                    if (state.showVolumeProjection) {
+                        // Draw corridor volume projections
+                        for (let i = 0; i < route.waypoints.length - 1; i++) {
+                            const wp1 = route.waypoints[i];
+                            const wp2 = route.waypoints[i + 1];
+                            
+                            if (!wp1 || !wp2 || wp1.lat === undefined || wp1.lon === undefined ||
+                                wp2.lat === undefined || wp2.lon === undefined) {
+                                continue;
+                            }
+                            
+                            const width = (wp1.width !== undefined && wp1.width > 0) ? wp1.width : 457;
+                            const height = (wp1.height !== undefined && wp1.height > 0) ? wp1.height : 305;
+
+                            // Calculate bearing and corridor offset
+                            const bearing = calculateBearing(wp1.lat, wp1.lon, wp2.lat, wp2.lon);
+                            const perpBearing = (bearing + 90) % 360;
+                            const halfWidthKm = (width / 2) / 1000; // Convert meters to km
+
+                            // Create rectangle corners (project on 2D by offsetting perpendicular)
+                            const [lat1_left, lon1_left] = offsetPoint(wp1.lat, wp1.lon, halfWidthKm, perpBearing);
+                            const [lat1_right, lon1_right] = offsetPoint(wp1.lat, wp1.lon, -halfWidthKm, perpBearing);
+                            const [lat2_left, lon2_left] = offsetPoint(wp2.lat, wp2.lon, halfWidthKm, perpBearing);
+                            const [lat2_right, lon2_right] = offsetPoint(wp2.lat, wp2.lon, -halfWidthKm, perpBearing);
+
+                            const corners = [
+                                [lat1_left, lon1_left],
+                                [lat2_left, lon2_left],
+                                [lat2_right, lon2_right],
+                                [lat1_right, lon1_right]
+                            ];
+
+                            const polygon = L.polygon(corners, {
+                                color: colorStr,
+                                weight: 2,
+                                opacity: 0.7,
+                                fillOpacity: 0.2,
+                                fillColor: colorStr
+                            }).bindPopup(`<b>${route.name}</b><br>Width: ${width}m<br>Height (Alt): ${height}m<br>Path Altitude: ${displayAltitude}${unit}`);
+                            
+                            if (map2D.routeLines) map2D.routeLines.addLayer(polygon);
+                        }
+                    } else {
+                        // Draw centerline (original behavior)
+                        const polyline = L.polyline(latlngs, {
+                            color: colorStr,
+                            weight: 3,
+                            opacity: 0.7,
+                            dashArray: '5, 5'
+                        }).bindPopup(`<b>${route.name}</b><br>Altitude: ${displayAltitude}${unit}`);
+                        
+                        if (map2D.routeLines) map2D.routeLines.addLayer(polyline);
+                    }
+
+                    // Add waypoint markers based on showNodes setting (draggable)
+                    if (state.showNodes) {
+                        latlngs.forEach((latlng, idx) => {
+                            // Create icon with the route's color
+                            const icon = L.divIcon({
+                                className: 'waypoint-marker',
+                                html: `<div style="width: 12px; height: 12px; background: ${colorStr}; border: 2px solid #000; border-radius: 50%; cursor: grab; display: flex; align-items: center; justify-content: center;"></div>`,
+                                iconSize: [12, 12],
+                                iconAnchor: [6, 6]
+                            });
+                            
+                            const marker = L.marker(latlng, {
+                                icon: icon,
+                                draggable: true,
+                                title: route.waypoints[idx].name || 'WP ' + idx
+                            }).bindPopup(`<b>${route.waypoints[idx].name || 'WP ' + idx}</b><br>Lat: ${route.waypoints[idx].lat.toFixed(6)}<br>Lon: ${route.waypoints[idx].lon.toFixed(6)}`);
+                            
+                            // Store route and waypoint info in marker for reference
+                            marker.routeId = route.id;
+                            marker.waypointIndex = idx;
+                            marker.routeData = route;
+                            
+                            // Drag event handlers
+                            marker.on('dragstart', function() {
+                                this.setOpacity(0.6);
+                            });
+                            
+                            marker.on('drag', function() {
+                                const latlng = this.getLatLng();
+                                this.setPopupContent(`<b>${route.waypoints[idx].name || 'WP ' + idx}</b><br>Lat: ${latlng.lat.toFixed(6)}<br>Lon: ${latlng.lng.toFixed(6)}<br><em>(Dragging...)</em>`);
+                            });
+                            
+                            marker.on('dragend', function() {
+                                const latlng = this.getLatLng();
+                                const routeId = this.routeId;
+                                const wpIndex = this.waypointIndex;
+                                
+                                // Find and update the route
+                                const routeToUpdate = state.routes.find(r => r.id === routeId);
+                                if (routeToUpdate && routeToUpdate.waypoints[wpIndex]) {
+                                    // Update waypoint coordinates
+                                    routeToUpdate.waypoints[wpIndex].lat = latlng.lat;
+                                    routeToUpdate.waypoints[wpIndex].lon = latlng.lng;
+                                }
+                                
+                                this.setOpacity(1);
+                                this.setPopupContent(`<b>${route.waypoints[wpIndex].name || 'WP ' + wpIndex}</b><br>Lat: ${latlng.lat.toFixed(6)}<br>Lon: ${latlng.lng.toFixed(6)}<br><small>Updated</small>`);
+                                this.openPopup();
+                                
+                                // Refresh the map and 3D view
+                                updateMap();
+                                renderScene();
+                                updateUI();
+                            });
+                            
+                            if (map2D.routeMarkers) map2D.routeMarkers.addLayer(marker);
+                        });
+                    }
+                });
+            }
+        }
+
+        // Toggle between 3D and Map view
+        function switchView(viewType) {
+            state.currentView = viewType;
+
+            const canvas = document.getElementById('canvas');
+            const mapDiv = document.getElementById('map');
+            const btn3d = document.getElementById('view3dBtn');
+            const btnMap = document.getElementById('viewMapBtn');
+            const mapControls = document.getElementById('mapControls');
+            const viewControls3D = document.getElementById('viewControls3D');
+            const mapControls3D = document.getElementById('mapControls3D');
+
+            if (viewType === '3d') {
+                canvas.style.display = 'block';
+                mapDiv.style.display = 'none';
+                mapControls.style.display = 'none';
+                viewControls3D.style.display = 'block';
+                mapControls3D.style.display = 'none';
+                btn3d.classList.add('active');
+                btnMap.classList.remove('active');
+            } else {
+                canvas.style.display = 'none';
+                mapDiv.style.display = 'block';
+                mapControls.style.display = 'block';
+                viewControls3D.style.display = 'none';
+                mapControls3D.style.display = 'block';
+                btn3d.classList.remove('active');
+                btnMap.classList.add('active');
+                initMap();
+                updateMap();
+            }
+        }
+
+        // Update grid visibility and size
+        function updateGrid() {
+            if (gridHelper) scene.remove(gridHelper);
+            if (state.showGrid) {
+                const bounds = calculateSceneBounds();
+                const size = Math.max(bounds.width, bounds.height) * 2.0;
+                const divisions = Math.ceil(size / state.gridCellSize);
+                
+                gridHelper = new THREE.GridHelper(size, divisions, 0x444444, 0x888888);
+                gridHelper.position.set(bounds.centerX, 0, bounds.centerZ);
+                scene.add(gridHelper);
+            }
+        }
+
+        // Convert lat/lon to 3D coordinates
+        function latLonToXYZ(lat, lon, alt = 0) {
+            const centerLat = -23.55;
+            const centerLon = -46.63;
+            const scale = 100000;
+
+            const x = (lon - centerLon) * scale * Math.cos(centerLat * Math.PI / 180);
+            const z = -(lat - centerLat) * scale;
+            const y = alt;
+
+            return { x, y, z };
+        }
+
+        // Render all routes and vertiports
+        // Track renderScene calls for debugging
+        let renderSceneCallCount = 0;
+
+        function renderScene() {
+            // Clear previous route objects - properly dispose geometries and materials
+            const objectsToRemove = scene.children.filter(
+                child => child.userData && (child.userData.isRoute || child.userData.isVertiport)
+            );
+            objectsToRemove.forEach(obj => {
+                scene.remove(obj);
+                // Dispose of geometry and material to prevent memory leaks
+                if (obj.geometry) obj.geometry.dispose();
+                if (obj.material) {
+                    if (Array.isArray(obj.material)) {
+                        obj.material.forEach(mat => {
+                            if (mat.map) mat.map.dispose();
+                            mat.dispose();
+                        });
+                    } else {
+                        if (obj.material.map) obj.material.map.dispose();
+                        obj.material.dispose();
+                    }
+                }
+            });
+
+            // Render vertiports
+            state.vertiports.forEach((vertiport, name) => {
+                if (!vertiport.visible) return;
+                const pos = latLonToXYZ(vertiport.lat, vertiport.lon, 0);
+
+                // Cylinder for vertiport zone
+                const geometry = new THREE.CylinderGeometry(
+                    vertiport.radius,
+                    vertiport.radius,
+                    vertiport.height,
+                    32
+                );
+                const material = new THREE.MeshLambertMaterial({
+                    color: 0x4444ff,
+                    transparent: true,
+                    opacity: 0.3
+                });
+                const cylinder = new THREE.Mesh(geometry, material);
+                cylinder.position.set(pos.x, vertiport.height / 2, pos.z);
+                cylinder.userData.isVertiport = true;
+                scene.add(cylinder);
+
+                // Label
+                const canvas = document.createElement('canvas');
+                const ctx = canvas.getContext('2d');
+                canvas.width = 256;
+                canvas.height = 64;
+                ctx.fillStyle = '#ffffff';
+                ctx.fillRect(0, 0, 256, 64);
+                ctx.fillStyle = '#000000';
+                ctx.font = 'bold 24px Arial';
+                ctx.fillText(name, 10, 40);
+
+                const texture = new THREE.CanvasTexture(canvas);
+                const spriteMaterial = new THREE.SpriteMaterial({ map: texture });
+                const sprite = new THREE.Sprite(spriteMaterial);
+                sprite.position.set(pos.x, vertiport.height + 50, pos.z);
+                sprite.scale.set(200, 50, 1);
+                sprite.userData.isVertiport = true;
+                scene.add(sprite);
+            });
+
+            // Render routes
+            state.routes.forEach(route => {
+                if (!route.visible) return;
+
+                const points = route.waypoints.map((wp, idx) => {
+                    // Use the altitude from CSV, or 760m as default if not provided
+                    const altitude = wp.altitude || 760;
+                    const pos = latLonToXYZ(wp.lat, wp.lon, altitude);
+                    return new THREE.Vector3(pos.x, pos.y, pos.z);
+                });
+
+                // Centerline
+                const lineGeometry = new THREE.BufferGeometry().setFromPoints(points);
+                const lineMaterial = new THREE.LineBasicMaterial({
+                    color: route.color,
+                    linewidth: 2
+                });
+                const line = new THREE.Line(lineGeometry, lineMaterial);
+                line.userData.isRoute = true;
+                scene.add(line);
+
+                // Corridor tubes
+                for (let i = 0; i < points.length - 1; i++) {
+                    const start = points[i];
+                    const end = points[i + 1];
+                    const direction = new THREE.Vector3().subVectors(end, start);
+                    const length = direction.length();
+                    if (length === 0) continue; // Skip if points are identical
+                    
+                    const center = new THREE.Vector3().addVectors(start, end).multiplyScalar(0.5);
+                    
+                    // Use width and height from the start waypoint of this segment
+                    const startWaypoint = route.waypoints[i];
+                    const segmentWidth = (startWaypoint && startWaypoint.width) ? startWaypoint.width : 457;
+                    const segmentHeight = (startWaypoint && startWaypoint.height) ? startWaypoint.height : 305;
+                    
+                    // Skip rendering if both dimensions are 0 or negative
+                    if (segmentWidth <= 0 || segmentHeight <= 0) continue;
+
+                    const boxGeometry = new THREE.BoxGeometry(
+                        segmentWidth,
+                        segmentHeight,
+                        length
+                    );
+                        const boxMaterial = new THREE.MeshLambertMaterial({
+                            color: route.color,
+                            transparent: true,
+                            opacity: state.solidVolumes ? 0.8 : 0.2,
+                            side: THREE.DoubleSide
+                        });
+                        const box = new THREE.Mesh(boxGeometry, boxMaterial);
+
+                        box.position.copy(center);
+                        
+                        // Properly align box along the path using lookAt-like rotation
+                        const normalizedDir = direction.normalize();
+                        const upVector = new THREE.Vector3(0, 1, 0);
+                        if (Math.abs(normalizedDir.dot(upVector)) > 0.99) {
+                            upVector.set(0, 0, 1);
+                        }
+                        const rightVector = new THREE.Vector3().crossVectors(upVector, normalizedDir).normalize();
+                        const trueUp = new THREE.Vector3().crossVectors(normalizedDir, rightVector);
+                        
+                        const rotMatrix = new THREE.Matrix4();
+                        rotMatrix.makeBasis(rightVector, trueUp, normalizedDir);
+                        box.setRotationFromMatrix(rotMatrix);
+                        box.userData.isRoute = true;
+                        scene.add(box);
+
+                        // Wireframe
+                        const edges = new THREE.EdgesGeometry(boxGeometry);
+                        const lineMat = new THREE.LineBasicMaterial({ color: route.color });
+                        const wireframe = new THREE.LineSegments(edges, lineMat);
+                        wireframe.position.copy(box.position);
+                        wireframe.setRotationFromMatrix(rotMatrix);
+                        wireframe.userData.isRoute = true;
+                        scene.add(wireframe);
+                    }
+
+                // Waypoint markers - using points array like the working version
+                if (state.showNodes) {
+                    points.forEach((point, idx) => {
+                        const wp = route.waypoints[idx];
+                        if (!wp) return;
+                        
+                        const sphereGeometry = new THREE.SphereGeometry(20, 16, 16);
+                        const sphereMaterial = new THREE.MeshLambertMaterial({ color: 0xffff00 });
+                        const sphere = new THREE.Mesh(sphereGeometry, sphereMaterial);
+                        sphere.position.copy(point);
+                        sphere.userData.isRoute = true;
+                        scene.add(sphere);
+                        
+                        // Add waypoint name label (optional - BKP 4 doesn't have this, but keeping for UX)
+                        const canvas = document.createElement('canvas');
+                        const ctx = canvas.getContext('2d');
+                        canvas.width = 256;
+                        canvas.height = 64;
+                        ctx.fillStyle = '#ffffff';
+                        ctx.fillRect(0, 0, 256, 64);
+                        ctx.fillStyle = '#000000';
+                        ctx.font = 'bold 18px Arial';
+                        ctx.fillText(`${wp.name}`, 10, 35);
+                        ctx.font = '12px Arial';
+                        // Display altitude from CSV, or 760m as default if not provided
+                        const displayAltitude = wp.altitude || 760;
+                        ctx.fillText(`Alt: ${Math.round(displayAltitude)}m`, 10, 50);
+                        
+                        const texture = new THREE.CanvasTexture(canvas);
+                        const spriteMaterial = new THREE.SpriteMaterial({ map: texture });
+                        const sprite = new THREE.Sprite(spriteMaterial);
+                        sprite.position.copy(point);
+                        sprite.position.y += 100;
+                        sprite.scale.set(150, 40, 1);
+                        sprite.userData.isRoute = true;
+                        scene.add(sprite);
+                    });
+                }
+
+            });
+        }
+
+        // Update UI
+        function updateUI() {
+            
+            // Update vertiports list
+            const vertiportsList = document.getElementById('vertiportsList');
+            vertiportsList.innerHTML = '';
+            state.vertiports.forEach((vertiport, name) => {
+                const vertiportEl = document.createElement('div');
+                vertiportEl.className = `route-item ${state.selectedVertiportName === name ? 'selected' : ''}`;
+                const displayRadius = getDisplayValue(vertiport.radius);
+                const displayHeight = getDisplayValue(vertiport.height);
+                const unit = getDisplayUnit();
+                vertiportEl.innerHTML = `
+                    <div class="route-item-header">
+                        <div class="route-item-name">
+                            <div class="route-color-swatch" style="background-color: #4444ff"></div>
+                            <span>${name}</span>
+                        </div>
+                        <button class="button-small" style="background: none; border: none; cursor: pointer;" data-vertiport-name="${name}">
+                            ${vertiport.visible ? '👁️' : '🙈'}
+                        </button>
+                    </div>
+                    <div class="route-item-info">
+                        ${vertiport.type}, R: ${displayRadius}${unit}, H: ${displayHeight}${unit}
+                    </div>
+                `;
+                vertiportEl.addEventListener('click', () => selectVertiport(name));
+                const visibilityBtn = vertiportEl.querySelector('button');
+                visibilityBtn.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    toggleVertiportVisibility(name);
+                });
+                vertiportsList.appendChild(vertiportEl);
+            });
+
+            document.getElementById('vertiportCount').textContent = state.vertiports.size;
+
+            // Update vertiport editor
+            const vertiportEditor = document.getElementById('vertiportEditor');
+            const selectedVertiport = state.selectedVertiportName ? state.vertiports.get(state.selectedVertiportName) : null;
+            if (selectedVertiport) {
+                vertiportEditor.style.display = 'block';
+                if (state.editingFieldId !== 'vertiportName') document.getElementById('vertiportName').value = state.selectedVertiportName;
+                if (state.editingFieldId !== 'vertiportLat') document.getElementById('vertiportLat').value = selectedVertiport.lat;
+                if (state.editingFieldId !== 'vertiportLon') document.getElementById('vertiportLon').value = selectedVertiport.lon;
+                if (state.editingFieldId !== 'vertiportRadius') document.getElementById('vertiportRadius').value = getDisplayValue(selectedVertiport.radius);
+                if (state.editingFieldId !== 'vertiportHeight') document.getElementById('vertiportHeight').value = getDisplayValue(selectedVertiport.height);
+                if (state.editingFieldId !== 'vertiportType') document.getElementById('vertiportType').value = selectedVertiport.type;
+                // Update labels
+                const unit = getDisplayUnit();
+                const radiusLabel = document.querySelector('label[for="vertiportRadius"]');
+                const heightLabel = document.querySelector('label[for="vertiportHeight"]');
+                if (radiusLabel) radiusLabel.textContent = `Radius (${unit})`;
+                if (heightLabel) heightLabel.textContent = `Height (${unit})`;
+            } else {
+                vertiportEditor.style.display = 'none';
+            }
+
+            // Update routes list
+            const routesList = document.getElementById('routesList');
+            routesList.innerHTML = '';
+            state.routes.forEach(route => {
+                const routeEl = document.createElement('div');
+                routeEl.className = `route-item ${state.selectedRouteId === route.id ? 'selected' : ''}`;
+                const displayAltitude = getDisplayValue(getRouteAltitude(route));
+                const unit = getDisplayUnit();
+                routeEl.innerHTML = `
+                    <div class="route-item-header">
+                        <div class="route-item-name">
+                            <div class="route-color-swatch" style="background-color: rgb(${route.color.r}, ${route.color.g}, ${route.color.b})"></div>
+                            <span>${route.name}</span>
+                        </div>
+                        <button class="button-small" style="background: none; border: none; cursor: pointer;" data-route-id="${route.id}">
+                            ${route.visible ? '👁️' : '🙈'}
+                        </button>
+                    </div>
+                    <div class="route-item-info">
+                        ${route.waypoints.length} waypoints, Alt: ${displayAltitude}${unit}
+                    </div>
+                `;
+                routeEl.addEventListener('click', () => selectRoute(route.id));
+                const visibilityBtn = routeEl.querySelector('button');
+                visibilityBtn.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    toggleRouteVisibility(route.id);
+                });
+                routesList.appendChild(routeEl);
+            });
+
+            document.getElementById('routeCount').textContent = state.routes.length;
+
+            // Update editor
+            const routeEditor = document.getElementById('routeEditor');
+            const selectedRoute = state.routes.find(r => r.id === state.selectedRouteId);
+            if (selectedRoute) {
+                routeEditor.style.display = 'block';
+                const unit = getDisplayUnit();
+                if (state.editingFieldId !== 'routeName') document.getElementById('routeName').value = selectedRoute.name;
+                const routeAltEl = document.getElementById('routeAltitude');
+                const routeWidthEl = document.getElementById('routeCorridorWidth');
+                const routeHeightEl = document.getElementById('routeCorridorHeight');
+                if (routeAltEl) routeAltEl.value = getDisplayValue(getRouteAltitude(selectedRoute));
+                if (routeWidthEl) routeWidthEl.value = getDisplayValue(getRouteWidth(selectedRoute));
+                if (routeHeightEl) routeHeightEl.value = getDisplayValue(getRouteHeight(selectedRoute));
+                // Note: corridor width/height inputs are now read-only, showing mean values of all waypoints
+                // Update labels
+                const altitudeLabel = document.querySelector('label[for="routeAltitude"]');
+                const widthLabel = document.querySelector('label[for="routeCorridorWidth"]');
+                const heightLabelRoute = document.querySelector('label[for="routeCorridorHeight"]');
+                const horizontalLabel = document.querySelector('label[for="horizontalOffset"]');
+                const verticalLabel = document.querySelector('label[for="verticalOffset"]');
+                if (altitudeLabel) altitudeLabel.textContent = `Altitude (Mean - ${unit})`;
+                if (widthLabel) widthLabel.textContent = `Corridor Width (Mean - ${unit})`;
+                if (heightLabelRoute) heightLabelRoute.textContent = `Corridor Height (Mean - ${unit})`;
+                if (horizontalLabel) horizontalLabel.textContent = `Horizontal Distance (${unit})`;
+                if (verticalLabel) verticalLabel.textContent = `Vertical Distance (${unit})`;
+
+                // Update waypoints
+                const waypointsList = document.getElementById('waypointsList');
+                waypointsList.innerHTML = '';
+                selectedRoute.waypoints.forEach((wp, idx) => {
+                    const wpEl = document.createElement('div');
+                    wpEl.className = 'waypoint-item';
+                    wpEl.draggable = true;
+                    wpEl.dataset.waypointIndex = idx;
+                    wpEl.style.cursor = 'move';
+                    // Use CSV altitude for all waypoints
+                    const displayedAlt = wp.altitude || 760;
+                    const displayAlt = getDisplayValue(displayedAlt);
+                    const unit_wp = getDisplayUnit();
+                    const wpWidth = (wp.width !== undefined) ? wp.width : 457;
+                    const wpHeight = (wp.height !== undefined) ? wp.height : 305;
+                    const displayWidth = getDisplayValue(wpWidth);
+                    const displayHeight = getDisplayValue(wpHeight);
+                    wpEl.innerHTML = `
+                        <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 0.25rem;">
+                            <div style="flex: 1;">
+                                <label style="display: block; font-size: 0.7rem; margin-bottom: 0.125rem;">Name</label>
+                                <input type="text" data-waypoint-index="${idx}" data-waypoint-field="name" class="waypoint-name-input" value="${wp.name}" style="width: 100%; padding: 0.25rem; border: 1px solid #d1d5db; border-radius: 0.25rem; font-size: 0.75rem; box-sizing: border-box;">
+                            </div>
+                            <button class="waypoint-delete-btn" data-waypoint-index="${idx}" style="background: #ef4444; color: white; border: none; border-radius: 0.25rem; padding: 0.25rem 0.5rem; font-size: 0.7rem; cursor: pointer; flex-shrink: 0; margin-top: 1.25rem;">Delete</button>
+                        </div>
+                        <div style="font-size: 0.75rem; color: #6b7280; margin-top: 0.25rem; display: flex; gap: 0.5rem;">
+                            <div style="flex: 1;">
+                                <label style="display: block; font-size: 0.7rem; margin-bottom: 0.125rem;">Lat</label>
+                                <input type="number" data-waypoint-index="${idx}" data-waypoint-field="lat" class="waypoint-coord-input" value="${wp.lat.toFixed(6)}" step="0.000001" style="width: 100%; padding: 0.25rem; border: 1px solid #d1d5db; border-radius: 0.25rem; font-size: 0.75rem; box-sizing: border-box;">
+                            </div>
+                            <div style="flex: 1;">
+                                <label style="display: block; font-size: 0.7rem; margin-bottom: 0.125rem;">Lon</label>
+                                <input type="number" data-waypoint-index="${idx}" data-waypoint-field="lon" class="waypoint-coord-input" value="${wp.lon.toFixed(6)}" step="0.000001" style="width: 100%; padding: 0.25rem; border: 1px solid #d1d5db; border-radius: 0.25rem; font-size: 0.75rem; box-sizing: border-box;">
+                            </div>
+                        </div>
+                        <div class="waypoint-altitude" style="font-size: 0.75rem; color: #6b7280; margin-top: 0.25rem;">
+                            Altitude: <input type="number" data-waypoint-index="${idx}" class="waypoint-alt-input" value="${displayAlt}" style="width: 70px; padding: 0.25rem; border: 1px solid #d1d5db; border-radius: 0.25rem; font-size: 0.75rem;"> ${unit_wp}
+                        </div>
+                        <div style="font-size: 0.75rem; color: #6b7280; margin-top: 0.25rem; display: flex; gap: 0.5rem;">
+                            <div style="flex: 1;">
+                                <label style="display: block; font-size: 0.7rem; margin-bottom: 0.125rem;">Corridor Width</label>
+                                <input type="number" data-waypoint-index="${idx}" class="waypoint-width-input" value="${displayWidth}" style="width: 100%; padding: 0.25rem; border: 1px solid #d1d5db; border-radius: 0.25rem; font-size: 0.75rem;">
+                            </div>
+                            <div style="flex: 1;">
+                                <label style="display: block; font-size: 0.7rem; margin-bottom: 0.125rem;">Height</label>
+                                <input type="number" data-waypoint-index="${idx}" class="waypoint-height-input" value="${displayHeight}" style="width: 100%; padding: 0.25rem; border: 1px solid #d1d5db; border-radius: 0.25rem; font-size: 0.75rem;">
+                            </div>
+                        </div>
+                        <div style="font-size: 0.7rem; color: #9ca3af;">${unit_wp}</div>
+                    `;
+                    waypointsList.appendChild(wpEl);
+                });
+            } else {
+                routeEditor.style.display = 'none';
+            }
+
+            // Update statistics
+            document.getElementById('statRoutes').textContent = state.routes.length;
+            document.getElementById('statVertiports').textContent = state.vertiports.size;
+            document.getElementById('statWaypoints').textContent = state.routes.reduce((sum, r) => sum + r.waypoints.length, 0);
+
+            updateMapPlane();
+            renderScene();
+            
+            // Re-attach form listeners after DOM regeneration
+            attachFormListeners();
+            
+            // Update map in background if initialized (always keep it in sync)
+            if (map2D) {
+                updateMap();
+            }
+        }
+
+        // Vertiport management functions
+        function selectVertiport(name) {
+            state.selectedVertiportName = name;
+            updateUI();
+        }
+
+        function addVertiport() {
+            const name = `Vertiport ${state.vertiports.size + 1}`;
+            state.vertiports.set(name, {
+                lat: -23.55,
+                lon: -46.63,
+                height: 760,
+                radius: 610,
+                type: 'Vertiport',
+                visible: true
+            });
+            state.selectedVertiportName = name;
+            updateUI();
+        }
+
+        function toggleVertiportVisibility(name) {
+            const vertiport = state.vertiports.get(name);
+            if (vertiport) {
+                vertiport.visible = !vertiport.visible;
+                updateUI();
+            }
+        }
+
+        function toggleAllVertiportsVisibility() {
+            state.allVertiportsVisible = !state.allVertiportsVisible;
+            state.vertiports.forEach((vertiport) => {
+                vertiport.visible = state.allVertiportsVisible;
+            });
+            updateUI();
+        }
+
+        function updateVertiport(updates) {
+            if (!state.selectedVertiportName) return;
+            const vertiport = state.vertiports.get(state.selectedVertiportName);
+            if (!vertiport) return;
+            
+            // Handle name change
+            if (updates.name && updates.name !== state.selectedVertiportName) {
+                state.vertiports.set(updates.name, vertiport);
+                state.vertiports.delete(state.selectedVertiportName);
+                state.selectedVertiportName = updates.name;
+                delete updates.name;
+            }
+            
+            Object.assign(vertiport, updates);
+            updateUI();
+        }
+
+        function deleteVertiport() {
+            if (!state.selectedVertiportName) return;
+            state.vertiports.delete(state.selectedVertiportName);
+            state.selectedVertiportName = null;
+            updateUI();
+        }
+
+        // Route management functions
+        function selectRoute(routeId) {
+            state.selectedRouteId = routeId;
+            updateUI();
+        }
+
+        function toggleRouteVisibility(routeId) {
+            const route = state.routes.find(r => r.id === routeId);
+            if (route) {
+                route.visible = !route.visible;
+                updateUI();
+            }
+        }
+
+        function toggleAllRoutesVisibility() {
+            state.allRoutesVisible = !state.allRoutesVisible;
+            state.routes.forEach((route) => {
+                route.visible = state.allRoutesVisible;
+            });
+            updateUI();
+        }
+
+        function addRoute() {
+            const color = {
+                r: Math.floor(Math.random() * 256),
+                g: Math.floor(Math.random() * 256),
+                b: Math.floor(Math.random() * 256)
+            };
+            const newRoute = {
+                id: `route-${Date.now()}`,
+                name: `New Route ${state.routes.length + 1}`,
+                waypoints: [],
+                corridorWidth: 457,
+                corridorHeight: 152,
+                color: new THREE.Color(color.r / 255, color.g / 255, color.b / 255),
+                visible: true
+            };
+            state.routes.push(newRoute);
+            state.selectedRouteId = newRoute.id;
+            updateUI();
+        }
+
+        // Calculate mean altitude of all waypoints in a route (excluding start and end points)
+        function getRouteAltitude(route) {
+            if (route.waypoints.length === 0) return 1219; // default altitude (4000 ft)
+            if (route.waypoints.length <= 2) return 1219; // if 2 or fewer waypoints, return default (all are start/end)
+            
+            // Calculate mean of middle waypoints (exclude first and last)
+            const middleWaypoints = route.waypoints.slice(1, -1);
+            const totalAltitude = middleWaypoints.reduce((sum, wp) => sum + (wp.altitude || 1219), 0);
+            return Math.round(totalAltitude / middleWaypoints.length);
+        }
+
+        function getRouteWidth(route) {
+            if (route.waypoints.length === 0) return 457; // default width
+            
+            // Calculate mean of all waypoint widths
+            const totalWidth = route.waypoints.reduce((sum, wp) => sum + (wp.width || 457), 0);
+            return Math.round(totalWidth / route.waypoints.length);
+        }
+
+        function getRouteHeight(route) {
+            if (route.waypoints.length === 0) return 1219; // default height (4000 ft) for terminal airspace
+            
+            // Calculate mean of all waypoint heights
+            const totalHeight = route.waypoints.reduce((sum, wp) => sum + (wp.height || 305), 0);
+            return Math.round(totalHeight / route.waypoints.length);
+        }
+
+        function updateRoute(updates) {
+            const route = state.routes.find(r => r.id === state.selectedRouteId);
+            if (!route) return;
+            Object.assign(route, updates);
+            updateUI();
+        }
+
+        function deleteRoute() {
+            state.routes = state.routes.filter(r => r.id !== state.selectedRouteId);
+            state.selectedRouteId = null;
+            updateUI();
+        }
+
+        function addWaypoint() {
+            const route = state.routes.find(r => r.id === state.selectedRouteId);
+            if (!route) return;
+            
+            // Get default dimensions from last waypoint or use defaults
+            let defaultWidth = 457;  // 1500 ft
+            let defaultHeight = 305; // 1000 ft
+            if (route.waypoints.length > 0) {
+                const lastWp = route.waypoints[route.waypoints.length - 1];
+                defaultWidth = (lastWp.width !== undefined) ? lastWp.width : 457;
+                defaultHeight = (lastWp.height !== undefined) ? lastWp.height : 305;
+            }
+            
+            route.waypoints.push({
+                name: `WP ${route.waypoints.length + 1}`,
+                lat: -23.55,
+                lon: -46.63,
+                altitude: 1219,
+                width: defaultWidth,
+                height: defaultHeight,
+                type: 'Waypoint'
+            });
+            updateUI();
+        }
+
+        function deleteWaypoint(waypointIndex) {
+            const route = state.routes.find(r => r.id === state.selectedRouteId);
+            if (!route) return;
+            if (waypointIndex >= 0 && waypointIndex < route.waypoints.length) {
+                route.waypoints.splice(waypointIndex, 1);
+                updateUI();
+            }
+        }
+
+        function createParallelCorridor(offset, direction) {
+            const route = state.routes.find(r => r.id === state.selectedRouteId);
+            if (!route || route.waypoints.length < 2) return;
+
+            if (direction === 'horizontal') {
+                // Convert waypoints to 3D coordinates
+                const waypoints3D = route.waypoints.map(wp => 
+                    latLonToXYZ(wp.lat, wp.lon, 0)
+                );
+
+                // Step 1: Create parallel (offset) edges as infinite lines
+                const offsetLines = []; // { point: {x,z}, direction: {x,z} }
+                
+                for (let i = 0; i < waypoints3D.length - 1; i++) {
+                    const p0 = waypoints3D[i];
+                    const p1 = waypoints3D[i + 1];
+                    
+                    // Calculate edge direction and perpendicular
+                    let dirX = p1.x - p0.x;
+                    let dirZ = p1.z - p0.z;
+                    const mag = Math.sqrt(dirX * dirX + dirZ * dirZ);
+                    
+                    if (mag > 0.0001) {
+                        dirX /= mag;
+                        dirZ /= mag;
+                        
+                        // Perpendicular (90° to the right)
+                        const perpX = dirZ;
+                        const perpZ = -dirX;
+                        
+                        // Offset the starting point of this edge
+                        const offsetP0 = {
+                            x: p0.x + perpX * offset,
+                            z: p0.z + perpZ * offset
+                        };
+                        
+                        // Store as an infinite line: point + direction
+                        offsetLines.push({
+                            point: offsetP0,
+                            direction: { x: dirX, z: dirZ }
+                        });
+                    }
+                }
+
+                // Step 2: Build new waypoints from intersections of consecutive lines
+                // Keep start and end waypoints fixed (don't translate them)
+                const offsetWaypoints3D = [];
+                
+                // First waypoint: keep original position (no offset)
+                offsetWaypoints3D.push(waypoints3D[0]);
+                
+                if (offsetLines.length === 0) {
+                    // No valid edges - just add the end point
+                    offsetWaypoints3D.push(waypoints3D[waypoints3D.length - 1]);
+                } else if (offsetLines.length === 1) {
+                    // Single edge: use the offset edge endpoint for middle, keep start/end fixed
+                    const line = offsetLines[0];
+                    const edgeLen = Math.sqrt(
+                        Math.pow(waypoints3D[1].x - waypoints3D[0].x, 2) +
+                        Math.pow(waypoints3D[1].z - waypoints3D[0].z, 2)
+                    );
+                    
+                    offsetWaypoints3D.push({
+                        x: line.point.x + edgeLen * line.direction.x,
+                        z: line.point.z + edgeLen * line.direction.z
+                    });
+                    offsetWaypoints3D.push(waypoints3D[waypoints3D.length - 1]);
+                } else {
+                    // Multiple edges: 
+                    // WP0: keep original starting point (no offset)
+                    // WP(1..N-2): intersections of consecutive offset infinite lines
+                    // WP(N-1): keep original ending point (no offset)
+                    
+                    // Middle waypoints: intersections of consecutive offset infinite lines
+                    for (let i = 1; i < offsetLines.length; i++) {
+                        const line1 = offsetLines[i - 1];
+                        const line2 = offsetLines[i];
+                        
+                        // Find intersection of two infinite lines:
+                        // Line 1: P = line1.point + t * line1.direction
+                        // Line 2: P = line2.point + s * line2.direction
+                        
+                        const dx = line2.point.x - line1.point.x;
+                        const dz = line2.point.z - line1.point.z;
+                        
+                        const det = line1.direction.x * line2.direction.z - 
+                                   line1.direction.z * line2.direction.x;
+                        
+                        if (Math.abs(det) > 0.0001) {
+                            // Lines are not parallel - find intersection and add waypoint
+                            const t = (dx * line2.direction.z - dz * line2.direction.x) / det;
+                            const intersection = {
+                                x: line1.point.x + t * line1.direction.x,
+                                z: line1.point.z + t * line1.direction.z
+                            };
+                            offsetWaypoints3D.push(intersection);
+                        }
+                    }
+                    
+                    // Last waypoint: keep original ending point (no offset)
+                    offsetWaypoints3D.push(waypoints3D[waypoints3D.length - 1]);
+                }
+
+                // Step 3: Convert back to lat/lon
+                const centerLat = -23.55;
+                const centerLon = -46.63;
+                const scale = 100000;
+
+                const newWaypoints = offsetWaypoints3D.map((pos, idx) => {
+                    const newLon = centerLon + pos.x / (scale * Math.cos(centerLat * Math.PI / 180));
+                    const newLat = centerLat - pos.z / scale;
+                    const altitude = route.waypoints[idx] ? (route.waypoints[idx].altitude || 1219) : 1219;
+                    const width = route.waypoints[idx] && route.waypoints[idx].width ? route.waypoints[idx].width : 457;
+                    const height = route.waypoints[idx] && route.waypoints[idx].height ? route.waypoints[idx].height : 305;
+
+                    return {
+                        name: `WP ${idx + 1}`,
+                        lat: newLat,
+                        lon: newLon,
+                        altitude: altitude,
+                        width: width,
+                        height: height,
+                        type: 'Waypoint'
+                    };
+                });
+
+                const color = {
+                    r: Math.floor(Math.random() * 256),
+                    g: Math.floor(Math.random() * 256),
+                    b: Math.floor(Math.random() * 256)
+                };
+
+                // Count existing parallel routes from this parent to get a unique number
+                const parallelCount = state.routes.filter(r => 
+                    r.name.startsWith(`${route.name} (Parallel`)
+                ).length + 1;
+
+                const newRoute = {
+                    ...route,
+                    id: `route-${Date.now()}`,
+                    name: `${route.name} (Parallel ${parallelCount})`,
+                    waypoints: newWaypoints,
+                    color: new THREE.Color(color.r / 255, color.g / 255, color.b / 255)
+                };
+
+                state.routes.push(newRoute);
+                updateUI();
+            } else {
+                // Vertical offset (altitude change)
+                // Keep start and end waypoints altitude fixed
+                const color = {
+                    r: Math.floor(Math.random() * 256),
+                    g: Math.floor(Math.random() * 256),
+                    b: Math.floor(Math.random() * 256)
+                };
+
+                // Count existing parallel routes from this parent to get a unique number
+                const parallelCount = state.routes.filter(r => 
+                    r.name.startsWith(`${route.name} (Parallel`)
+                ).length + 1;
+
+                const newRoute = {
+                    ...route,
+                    id: `route-${Date.now()}`,
+                    name: `${route.name} (Parallel ${parallelCount})`,
+                    waypoints: route.waypoints.map((wp, idx) => {
+                        // Keep start and end waypoints at original altitude
+                        if (idx === 0 || idx === route.waypoints.length - 1) {
+                            return { ...wp };
+                        }
+                        // Apply offset to middle waypoints
+                        return {
+                            ...wp,
+                            altitude: (wp.altitude || 1219) + offset
+                        };
+                    }),
+                    color: new THREE.Color(color.r / 255, color.g / 255, color.b / 255)
+                };
+
+                state.routes.push(newRoute);
+                updateUI();
+            }
+        }
+
+        // File handling
+        function handleTrajectoryUpload(e) {
+            const file = e.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = (event) => {
+                const text = event.target.result;
+                const lines = text.split('\n');
+                if (lines.length < 2) return;
+
+                const headerLine = lines[0];
+                const headers = headerLine.split(',').map(h => h.replace(/"/g, '').trim());
+                
+                // Detect trajectory structure - should have lat, lon, possibly time/id
+                const hasLat = headers.includes('lat') || headers.includes('latitude');
+                const hasLon = headers.includes('lon') || headers.includes('longitude');
+                const hasId = headers.includes('trajectory_id') || headers.includes('id') || headers.includes('trajectory');
+                const hasTime = headers.includes('time') || headers.includes('timestamp');
+
+                if (!hasLat || !hasLon) {
+                    alert('CSV must contain "lat" and "lon" columns');
+                    return;
+                }
+
+                const trajectoryMap = new Map();
+                const colors = ['#ff0000', '#00ff00', '#0000ff', '#ffff00', '#ff00ff', '#00ffff', '#ff6600', '#6600ff'];
+
+                lines.slice(1).forEach((line, lineIdx) => {
+                    if (!line.trim()) return;
+                    
+                    const fields = [];
+                    let currentField = '';
+                    let insideQuotes = false;
+                    for (let i = 0; i < line.length; i++) {
+                        const char = line[i];
+                        if (char === '"') {
+                            insideQuotes = !insideQuotes;
+                        } else if (char === ',' && !insideQuotes) {
+                            fields.push(currentField.replace(/"/g, '').trim());
+                            currentField = '';
+                        } else {
+                            currentField += char;
+                        }
+                    }
+                    fields.push(currentField.replace(/"/g, '').trim());
+
+                    const latIdx = headers.findIndex(h => h === 'lat' || h === 'latitude');
+                    const lonIdx = headers.findIndex(h => h === 'lon' || h === 'longitude');
+                    const idIdx = headers.findIndex(h => h === 'indicat' || h === 'trajectory_id' || h === 'id' || h === 'trajectory' || h === 'route');
+                    const lat = parseFloat(fields[latIdx]);
+                    const lon = parseFloat(fields[lonIdx]);
+                    const trajId = (idIdx >= 0) ? fields[idIdx] : '0';
+
+                    if (!isNaN(lat) && !isNaN(lon)) {
+                        if (!trajectoryMap.has(trajId)) {
+                            const colorIdx = trajectoryMap.size % colors.length;
+                            trajectoryMap.set(trajId, {
+                                name: trajId !== '0' ? `Trajectory ${trajId}` : `Trajectory from ${file.name}`,
+                                points: [],
+                                color: colors[colorIdx]
+                            });
+                        }
+                        trajectoryMap.get(trajId).points.push({ lat, lon });
+                    }
+                });
+
+                // Add trajectories to state
+                state.trajectories = Array.from(trajectoryMap.values());
+                
+                // Switch to map view to see trajectories
+                if (state.currentView === '3d') {
+                    switchView('map');
+                }
+                
+                updateMap();
+                alert(`Loaded ${state.trajectories.length} trajectory(ies) with ${state.trajectories.reduce((sum, t) => sum + t.points.length, 0)} total points`);
+            };
+            reader.readAsText(file);
+        }
+
+        function handleCSVUpload(e) {
+            const file = e.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = (event) => {
+                const text = event.target.result;
+                const lines = text.split('\n');
+                const headerLine = lines[0];
+                const headers = headerLine.split(',').map(h => h.replace(/"/g, '').trim());
+                const hasAltitude = headers.includes('altitude');
+                const hasHeight = headers.includes('height');
+                const hasWidth = headers.includes('width');
+                
+                // Generate a single color for all routes in this file
+                const fileColor = {
+                    r: Math.floor(Math.random() * 256),
+                    g: Math.floor(Math.random() * 256),
+                    b: Math.floor(Math.random() * 256)
+                };
+                
+                const routeMap = new Map();
+                const vertiportMap = new Map();
+
+                lines.slice(1).forEach(line => {
+                    if (!line.trim()) return;
+                    
+                    // Parse CSV line handling quoted values
+                    const fields = [];
+                    let currentField = '';
+                    let insideQuotes = false;
+                    for (let i = 0; i < line.length; i++) {
+                        const char = line[i];
+                        if (char === '"') {
+                            insideQuotes = !insideQuotes;
+                        } else if (char === ',' && !insideQuotes) {
+                            fields.push(currentField.replace(/"/g, '').trim());
+                            currentField = '';
+                        } else {
+                            currentField += char;
+                        }
+                    }
+                    fields.push(currentField.replace(/"/g, '').trim());
+                    
+                    const [routeName, id, name, lat, lon, type] = fields.slice(0, 6);
+                    
+                    // Read geometric values if they exist in CSV, otherwise use defaults
+                    // Altitude defaults: 760 m for airports/vertiports, 1219 m (4000 ft) for others
+                    let waypointAltitude = (type === 'Airport' || type === 'Vertiport') ? 760 : 1219;
+                    let height = 305;        // default corridor height in meters (~1000 ft)
+                    let width = 457;         // default corridor width in meters (~1500 ft)
+                    
+                    if (hasAltitude && fields[6]) {
+                        waypointAltitude = parseFloat(fields[6]) || waypointAltitude;
+                    }
+                    if (hasHeight && fields[7]) {
+                        height = parseFloat(fields[7]) || 305;
+                    }
+                    if (hasWidth && fields[8]) {
+                        width = parseFloat(fields[8]) || 457;
+                    }
+
+                    if (type === 'Vertiport' || type === 'Airport') {
+                        if (!vertiportMap.has(name)) {
+                            vertiportMap.set(name, {
+                                lat: parseFloat(lat),
+                                lon: parseFloat(lon),
+                                height: 914,
+                                radius: 457,
+                                type,
+                                visible: true
+                            });
+                        }
+                    }
+
+                    if (!routeMap.has(routeName)) {
+                        routeMap.set(routeName, {
+                            id: routeName,
+                            name: routeName,
+                            waypoints: [],
+                            color: new THREE.Color(fileColor.r / 255, fileColor.g / 255, fileColor.b / 255),
+                            visible: true
+                        });
+                    }
+
+                    const wpLat = parseFloat(lat);
+                    const wpLon = parseFloat(lon);
+                    
+                    routeMap.get(routeName).waypoints.push({
+                        name,
+                        lat: wpLat,
+                        lon: wpLon,
+                        altitude: waypointAltitude,
+                        width: width,
+                        height: height,
+                        type
+                    });
+                });
+
+                // Merge new routes with existing routes (don't clear on new file upload)
+                const newRoutes = Array.from(routeMap.values());
+                const existingIds = new Set(state.routes.map(r => r.id));
+                newRoutes.forEach(route => {
+                    if (!existingIds.has(route.id)) {
+                        state.routes.push(route);
+                    }
+                });
+                
+                // Merge new vertiports with existing ones
+                vertiportMap.forEach((vp, name) => {
+                    state.vertiports.set(name, vp);
+                });
+                
+                state.selectedRouteId = state.routes.length > 0 ? state.routes[0].id : null;
+                
+                // Re-attach form listeners to ensure fresh event handlers after CSV load
+                attachFormListeners();
+                updateUI();
+            };
+            reader.readAsText(file);
+        }
+
+        function exportToCSV() {
+            let csv = 'route,id,name,lat,lon,type,altitude,height,width\n';
+            state.routes.forEach(route => {
+                route.waypoints.forEach((wp, idx) => {
+                    const wpWidth = (wp.width !== undefined) ? wp.width : 457;
+                    const wpHeight = (wp.height !== undefined) ? wp.height : 305;
+                    csv += `"${route.name}",${idx + 1},"${wp.name}",${wp.lat},${wp.lon},"${wp.type}",${wp.altitude || 1219},${wpHeight},${wpWidth}\n`;
+                });
+            });
+
+            const blob = new Blob([csv], { type: 'text/csv' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'uam_routes.csv';
+            a.click();
+            URL.revokeObjectURL(url);
+        }
+
+        function clearAll() {
+            if (confirm('Are you sure you want to clear all routes and vertiports? This cannot be undone.')) {
+                state.routes = [];
+                state.vertiports = new Map();
+                state.selectedRouteId = null;
+                state.selectedVertiportName = null;
+                // Reset file input so files can be loaded again
+                document.getElementById('csvFile').value = '';
+                updateUI();
+            }
+        }
+
+        // Handler functions for form listeners
+        const handleVertiportNameChange = (e) => {
+            state.editingFieldId = 'vertiportName';
+            updateVertiport({ name: e.target.value });
+        };
+        const handleVertiportLatChange = (e) => {
+            state.editingFieldId = 'vertiportLat';
+            updateVertiport({ lat: Number(e.target.value) });
+        };
+        const handleVertiportLonChange = (e) => {
+            state.editingFieldId = 'vertiportLon';
+            updateVertiport({ lon: Number(e.target.value) });
+        };
+        const handleVertiportRadiusChange = (e) => {
+            state.editingFieldId = 'vertiportRadius';
+            const displayValue = Number(e.target.value);
+            const metersValue = state.unit === 'feet' ? feetToMeters(displayValue) : displayValue;
+            updateVertiport({ radius: metersValue });
+        };
+        const handleVertiportHeightChange = (e) => {
+            state.editingFieldId = 'vertiportHeight';
+            const displayValue = Number(e.target.value);
+            const metersValue = state.unit === 'feet' ? feetToMeters(displayValue) : displayValue;
+            updateVertiport({ height: metersValue });
+        };
+        const handleVertiportTypeChange = (e) => {
+            state.editingFieldId = 'vertiportType';
+            updateVertiport({ type: e.target.value });
+        };
+        const handleRouteNameChange = (e) => {
+            state.editingFieldId = 'routeName';
+            updateRoute({ name: e.target.value });
+        };
+        const handleRouteAltitudeChange = (e) => {
+            state.editingFieldId = 'routeAltitude';
+            // Route altitude is now read-only (computed from waypoints)
+            updateRoute({});
+        };
+        const handleRouteWidthChange = (e) => {
+            state.editingFieldId = 'routeCorridorWidth';
+            // Route width is now read-only (computed from waypoints)
+            updateRoute({});
+        };
+        const handleRouteHeightChange = (e) => {
+            state.editingFieldId = 'routeCorridorHeight';
+            // Route height is now read-only (computed from waypoints)
+            updateRoute({});
+        };
+        const handleHorizontalCorridor = () => {
+            const displayValue = parseInt(document.getElementById('horizontalOffset').value) || 500;
+            const metersValue = state.unit === 'feet' ? feetToMeters(displayValue) : displayValue;
+            createParallelCorridor(metersValue, 'horizontal');
+        };
+        const handleVerticalCorridor = () => {
+            const displayValue = parseInt(document.getElementById('verticalOffset').value) || 100;
+            const metersValue = state.unit === 'feet' ? feetToMeters(displayValue) : displayValue;
+            createParallelCorridor(metersValue, 'vertical');
+        };
+
+        // Form listener management functions
+        function attachFormListeners() {
+            // Vertiport event listeners
+            const vertiportNameEl = document.getElementById('vertiportName');
+            const vertiportLatEl = document.getElementById('vertiportLat');
+            const vertiportLonEl = document.getElementById('vertiportLon');
+            const vertiportRadiusEl = document.getElementById('vertiportRadius');
+            const vertiportHeightEl = document.getElementById('vertiportHeight');
+            const vertiportTypeEl = document.getElementById('vertiportType');
+            const deleteVertiportBtnEl = document.getElementById('deleteVertiportBtn');
+            
+            if (vertiportNameEl) {
+                vertiportNameEl.addEventListener('input', handleVertiportNameChange);
+                vertiportNameEl.addEventListener('blur', () => { state.editingFieldId = null; });
+            }
+            if (vertiportLatEl) {
+                vertiportLatEl.addEventListener('input', handleVertiportLatChange);
+                vertiportLatEl.addEventListener('blur', () => { state.editingFieldId = null; });
+            }
+            if (vertiportLonEl) {
+                vertiportLonEl.addEventListener('input', handleVertiportLonChange);
+                vertiportLonEl.addEventListener('blur', () => { state.editingFieldId = null; });
+            }
+            if (vertiportRadiusEl) {
+                vertiportRadiusEl.addEventListener('input', handleVertiportRadiusChange);
+                vertiportRadiusEl.addEventListener('blur', () => { state.editingFieldId = null; });
+            }
+            if (vertiportHeightEl) {
+                vertiportHeightEl.addEventListener('input', handleVertiportHeightChange);
+                vertiportHeightEl.addEventListener('blur', () => { state.editingFieldId = null; });
+            }
+            if (vertiportTypeEl) {
+                vertiportTypeEl.addEventListener('input', handleVertiportTypeChange);
+                vertiportTypeEl.addEventListener('blur', () => { state.editingFieldId = null; });
+            }
+            if (deleteVertiportBtnEl) deleteVertiportBtnEl.addEventListener('click', deleteVertiport);
+
+            // Route event listeners
+            const routeNameEl = document.getElementById('routeName');
+            const routeAltitudeEl = document.getElementById('routeAltitude');
+            const routeWidthEl = document.getElementById('routeCorridorWidth');
+            const routeHeightEl = document.getElementById('routeCorridorHeight');
+            const addWaypointEl = document.getElementById('addWaypointBtn');
+            const deleteRouteEl = document.getElementById('deleteRouteBtn');
+            const horizontalBtn = document.getElementById('horizontalCorridorBtn');
+            const verticalBtn = document.getElementById('verticalCorridorBtn');
+            
+            if (routeNameEl) {
+                routeNameEl.addEventListener('input', handleRouteNameChange);
+                routeNameEl.addEventListener('blur', () => { state.editingFieldId = null; });
+            }
+            if (routeAltitudeEl) {
+                routeAltitudeEl.addEventListener('input', handleRouteAltitudeChange);
+                routeAltitudeEl.addEventListener('blur', () => { state.editingFieldId = null; });
+            }
+            // Route-level width/height inputs are now hidden since dimensions are per-waypoint
+            // if (routeWidthEl) { ... }
+            // if (routeHeightEl) { ... }
+            if (addWaypointEl) addWaypointEl.addEventListener('click', addWaypoint);
+            if (deleteRouteEl) deleteRouteEl.addEventListener('click', deleteRoute);
+            if (horizontalBtn) horizontalBtn.addEventListener('click', handleHorizontalCorridor);
+            if (verticalBtn) verticalBtn.addEventListener('click', handleVerticalCorridor);
+            
+            // Waypoint altitude event listeners
+            const waypointAltInputs = document.querySelectorAll('.waypoint-alt-input');
+            waypointAltInputs.forEach(input => {
+                input.addEventListener('input', (e) => {
+                    const route = state.routes.find(r => r.id === state.selectedRouteId);
+                    if (!route) return;
+                    
+                    const waypointIndex = parseInt(e.target.dataset.waypointIndex);
+                    const displayValue = Number(e.target.value);
+                    const metersValue = state.unit === 'feet' ? feetToMeters(displayValue) : displayValue;
+                    
+                    if (route.waypoints[waypointIndex]) {
+                        route.waypoints[waypointIndex].altitude = metersValue;
+                        // Update route altitude display without rebuilding the entire UI
+                        const routeAltEl = document.getElementById('routeAltitude');
+                        if (routeAltEl) routeAltEl.value = getDisplayValue(getRouteAltitude(route));
+                        // Update visualizations
+                        renderScene();
+                        if (map2D) updateMap();
+                    }
+                });
+            });
+
+            // Waypoint width event listeners
+            const waypointWidthInputs = document.querySelectorAll('.waypoint-width-input');
+            waypointWidthInputs.forEach(input => {
+                input.addEventListener('input', (e) => {
+                    const route = state.routes.find(r => r.id === state.selectedRouteId);
+                    if (!route) return;
+                    
+                    const waypointIndex = parseInt(e.target.dataset.waypointIndex);
+                    const displayValue = Number(e.target.value);
+                    const metersValue = state.unit === 'feet' ? feetToMeters(displayValue) : displayValue;
+                    
+                    if (route.waypoints[waypointIndex]) {
+                        route.waypoints[waypointIndex].width = metersValue;
+                        renderScene();
+                    }
+                });
+            });
+            
+            // Waypoint height event listeners
+            const waypointHeightInputs = document.querySelectorAll('.waypoint-height-input');
+            waypointHeightInputs.forEach(input => {
+                input.addEventListener('input', (e) => {
+                    const route = state.routes.find(r => r.id === state.selectedRouteId);
+                    if (!route) return;
+                    
+                    const waypointIndex = parseInt(e.target.dataset.waypointIndex);
+                    const displayValue = Number(e.target.value);
+                    const metersValue = state.unit === 'feet' ? feetToMeters(displayValue) : displayValue;
+                    
+                    if (route.waypoints[waypointIndex]) {
+                        route.waypoints[waypointIndex].height = metersValue;
+                        renderScene();
+                    }
+                });
+            });
+
+            // Waypoint name event listeners
+            const waypointNameInputs = document.querySelectorAll('.waypoint-name-input');
+            waypointNameInputs.forEach(input => {
+                input.addEventListener('input', (e) => {
+                    const route = state.routes.find(r => r.id === state.selectedRouteId);
+                    if (!route) return;
+                    
+                    const waypointIndex = parseInt(e.target.dataset.waypointIndex);
+                    const value = e.target.value;
+                    
+                    if (route.waypoints[waypointIndex]) {
+                        route.waypoints[waypointIndex].name = value;
+                        // Update visualizations without rebuilding the entire UI
+                        renderScene();
+                        if (map2D) updateMap();
+                    }
+                });
+            });
+
+            // Waypoint coordinate event listeners
+            const waypointCoordInputs = document.querySelectorAll('.waypoint-coord-input');
+            waypointCoordInputs.forEach(input => {
+                input.addEventListener('input', (e) => {
+                    const route = state.routes.find(r => r.id === state.selectedRouteId);
+                    if (!route) return;
+                    
+                    const waypointIndex = parseInt(e.target.dataset.waypointIndex);
+                    const field = e.target.dataset.waypointField;
+                    const value = Number(e.target.value);
+                    
+                    if (route.waypoints[waypointIndex]) {
+                        route.waypoints[waypointIndex][field] = value;
+                        // Update visualizations without rebuilding the entire UI
+                        updateMapPlane();
+                        renderScene();
+                        if (map2D) updateMap();
+                    }
+                });
+            });
+
+            // Waypoint delete button listeners
+            const waypointDeleteBtns = document.querySelectorAll('.waypoint-delete-btn');
+            waypointDeleteBtns.forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    const waypointIndex = parseInt(e.target.dataset.waypointIndex);
+                    deleteWaypoint(waypointIndex);
+                });
+            });
+
+            // Waypoint drag-and-drop listeners
+            const waypointItems = document.querySelectorAll('.waypoint-item');
+            waypointItems.forEach(item => {
+                item.addEventListener('dragstart', (e) => {
+                    const waypointIndex = parseInt(e.currentTarget.dataset.waypointIndex);
+                    state.draggedWaypointIndex = waypointIndex;
+                    e.dataTransfer.effectAllowed = 'move';
+                    e.currentTarget.style.opacity = '0.5';
+                });
+
+                item.addEventListener('dragover', (e) => {
+                    e.preventDefault();
+                    e.dataTransfer.dropEffect = 'move';
+                    e.currentTarget.style.borderTop = '2px solid #3b82f6';
+                });
+
+                item.addEventListener('dragleave', (e) => {
+                    e.currentTarget.style.borderTop = 'none';
+                });
+
+                item.addEventListener('drop', (e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    
+                    const route = state.routes.find(r => r.id === state.selectedRouteId);
+                    if (!route || state.draggedWaypointIndex === null) return;
+                    
+                    const dropIndex = parseInt(e.currentTarget.dataset.waypointIndex);
+                    const dragIndex = state.draggedWaypointIndex;
+                    
+                    if (dragIndex !== dropIndex) {
+                        // Reorder waypoints
+                        const draggedWaypoint = route.waypoints[dragIndex];
+                        route.waypoints.splice(dragIndex, 1);
+                        const insertIndex = dragIndex > dropIndex ? dropIndex : dropIndex - 1;
+                        route.waypoints.splice(insertIndex, 0, draggedWaypoint);
+                    }
+                    
+                    state.draggedWaypointIndex = null;
+                    e.currentTarget.style.borderTop = 'none';
+                    updateUI();
+                });
+
+                item.addEventListener('dragend', (e) => {
+                    e.currentTarget.style.opacity = '1';
+                    e.currentTarget.style.borderTop = 'none';
+                    state.draggedWaypointIndex = null;
+                });
+            });
+        }
+
+        // Event listeners
+        document.getElementById('csvFile').addEventListener('change', handleCSVUpload);
+        document.getElementById('trajectoryFile').addEventListener('change', handleTrajectoryUpload);
+        document.getElementById('addRouteBtn').addEventListener('click', addRoute);
+        document.getElementById('addVertiportBtn').addEventListener('click', addVertiport);
+        document.getElementById('toggleAllRoutesBtn').addEventListener('click', toggleAllRoutesVisibility);
+        document.getElementById('toggleAllVertiportsBtn').addEventListener('click', toggleAllVertiportsVisibility);
+        document.getElementById('exportBtn').addEventListener('click', exportToCSV);
+        document.getElementById('clearAllBtn').addEventListener('click', clearAll);
+        
+        // Attach initial form listeners
+        attachFormListeners();
+
+        document.getElementById('gridToggle').addEventListener('change', (e) => {
+            state.showGrid = e.target.checked;
+            updateGrid();
+        });
+
+        // Update grid size display value
+        function updateGridSizeDisplay() {
+            const unit = getDisplayUnit();
+            let displaySize = state.gridCellSize;
+            if (state.unit === 'feet') {
+                displaySize = metersToFeet(state.gridCellSize);
+            }
+            document.getElementById('gridSizeValue').textContent = `${displaySize} ${unit}`;
+        }
+
+        document.getElementById('gridSizeSlider').addEventListener('input', (e) => {
+            const newSize = parseInt(e.target.value);
+            state.gridCellSize = newSize;
+            updateGridSizeDisplay();
+            updateGrid();
+        });
+
+        document.getElementById('solidVolumesToggle').addEventListener('change', (e) => {
+            state.solidVolumes = e.target.checked;
+            renderScene();
+        });
+
+        document.getElementById('volumeProjectionToggle').addEventListener('change', (e) => {
+            state.showVolumeProjection = e.target.checked;
+            if (state.currentView === 'map') {
+                if (!map2D) initMap();
+                updateMap();
+            }
+        });
+
+        document.getElementById('showNodesToggle').addEventListener('change', (e) => {
+            state.showNodes = e.target.checked;
+            // Sync the other checkbox
+            const otherToggle = document.getElementById('showNodesToggle3D');
+            if (otherToggle) otherToggle.checked = e.target.checked;
+            if (state.currentView === 'map') {
+                if (!map2D) initMap();
+                updateMap();
+            } else {
+                renderScene();
+            }
+        });
+
+        document.getElementById('showNodesToggle3D').addEventListener('change', (e) => {
+            state.showNodes = e.target.checked;
+            // Sync the other checkbox
+            const otherToggle = document.getElementById('showNodesToggle');
+            if (otherToggle) otherToggle.checked = e.target.checked;
+            if (state.currentView === 'map') {
+                if (!map2D) initMap();
+                updateMap();
+            } else {
+                renderScene();
+            }
+        });
+
+        // Unit toggle listeners
+        document.getElementById('unitMetersBtn').addEventListener('click', () => {
+            state.unit = 'meters';
+            document.getElementById('unitMetersBtn').style.background = '#3b82f6';
+            document.getElementById('unitMetersBtn').style.color = 'white';
+            document.getElementById('unitMetersBtn').style.borderColor = '#2563eb';
+            document.getElementById('unitFeetBtn').style.background = '#e5e7eb';
+            document.getElementById('unitFeetBtn').style.color = '#374151';
+            document.getElementById('unitFeetBtn').style.borderColor = '#d1d5db';
+            updateGridSizeDisplay();
+            updateUI();
+        });
+
+        document.getElementById('unitFeetBtn').addEventListener('click', () => {
+            state.unit = 'feet';
+            document.getElementById('unitFeetBtn').style.background = '#3b82f6';
+            document.getElementById('unitFeetBtn').style.color = 'white';
+            document.getElementById('unitFeetBtn').style.borderColor = '#2563eb';
+            document.getElementById('unitMetersBtn').style.background = '#e5e7eb';
+            document.getElementById('unitMetersBtn').style.color = '#374151';
+            document.getElementById('unitMetersBtn').style.borderColor = '#d1d5db';
+            updateGridSizeDisplay();
+            updateUI();
+        });
+
+        // View toggle listeners
+        document.getElementById('view3dBtn').addEventListener('click', () => switchView('3d'));
+        document.getElementById('viewMapBtn').addEventListener('click', () => switchView('map'));
+        document.getElementById('mapTileToggle').addEventListener('click', switchMapTileLayer);
+
+        // Batch Parallel Routes Modal Functions
+        function openBatchParallelModal() {
+            document.getElementById('batchParallelModal').classList.add('active');
+            // Initialize modal fields based on current state
+            updateBatchModalFields();
+        }
+
+        function closeBatchParallelModal() {
+            document.getElementById('batchParallelModal').classList.remove('active');
+        }
+
+        function updateTotalRoutesPreview() {
+            // Get all offset inputs
+            const horizontalInputs = Array.from(document.querySelectorAll('.horizontal-offset-input'));
+            const verticalInputs = Array.from(document.querySelectorAll('.vertical-offset-input'));
+
+            // Each pair of (horizontal, vertical) offsets creates ONE parallel route
+            // The number of parallel routes per original route = max number of offset pairs
+            const numOffsetsPerRoute = Math.max(horizontalInputs.length, verticalInputs.length);
+
+            // Count valid offset pairs (at least one non-zero offset per pair)
+            let validPairs = 0;
+            for (let i = 0; i < numOffsetsPerRoute; i++) {
+                const hOffset = horizontalInputs[i] ? parseFloat(horizontalInputs[i].value) : 0;
+                const vOffset = verticalInputs[i] ? parseFloat(verticalInputs[i].value) : 0;
+                
+                // Count as valid if horizontal !== 0 OR vertical !== 0 (allows negative values)
+                if (hOffset !== 0 || vOffset !== 0) {
+                    validPairs++;
+                }
+            }
+
+            // Total = existing routes * valid parallel routes per original
+            const totalRoutes = state.routes.length * validPairs;
+            document.getElementById('totalRoutesCount').textContent = totalRoutes;
+        }
+
+        function updateBatchModalFields() {
+            const numRoutes = parseInt(document.getElementById('numParallelRoutes').value) || 1;
+            const horizontalContainer = document.getElementById('horizontalOffsetsContainer');
+            const verticalContainer = document.getElementById('verticalOffsetsContainer');
+
+            // Clear and rebuild horizontal offset fields
+            horizontalContainer.innerHTML = '';
+            for (let i = 1; i <= numRoutes; i++) {
+                const field = document.createElement('div');
+                field.className = 'offset-field';
+                const input = document.createElement('input');
+                input.type = 'number';
+                input.className = 'horizontal-offset-input';
+                input.value = 500 * i;
+                input.step = '1';
+                input.addEventListener('change', updateTotalRoutesPreview);
+                input.addEventListener('input', updateTotalRoutesPreview);
+
+                const label = document.createElement('label');
+                label.className = 'offset-field-label';
+                label.textContent = `Route ${i} Horizontal Offset`;
+
+                const groupDiv = document.createElement('div');
+                groupDiv.className = 'offset-field-group';
+                groupDiv.appendChild(label);
+                groupDiv.appendChild(input);
+
+                const removeBtn = document.createElement('button');
+                removeBtn.className = 'remove-offset-btn';
+                removeBtn.textContent = '×';
+                removeBtn.title = 'Remove this offset';
+                removeBtn.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    field.remove();
+                    updateTotalRoutesPreview();
+                });
+
+                field.appendChild(groupDiv);
+                field.appendChild(removeBtn);
+                horizontalContainer.appendChild(field);
+            }
+
+            // Clear and rebuild vertical offset fields
+            verticalContainer.innerHTML = '';
+            for (let i = 1; i <= numRoutes; i++) {
+                const field = document.createElement('div');
+                field.className = 'offset-field';
+                const input = document.createElement('input');
+                input.type = 'number';
+                input.className = 'vertical-offset-input';
+                input.value = 100 * i;
+                input.step = '1';
+                input.addEventListener('change', updateTotalRoutesPreview);
+                input.addEventListener('input', updateTotalRoutesPreview);
+
+                const label = document.createElement('label');
+                label.className = 'offset-field-label';
+                label.textContent = `Route ${i} Vertical Offset`;
+
+                const groupDiv = document.createElement('div');
+                groupDiv.className = 'offset-field-group';
+                groupDiv.appendChild(label);
+                groupDiv.appendChild(input);
+
+                const removeBtn = document.createElement('button');
+                removeBtn.className = 'remove-offset-btn';
+                removeBtn.textContent = '×';
+                removeBtn.title = 'Remove this offset';
+                removeBtn.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    field.remove();
+                    updateTotalRoutesPreview();
+                });
+
+                field.appendChild(groupDiv);
+                field.appendChild(removeBtn);
+                verticalContainer.appendChild(field);
+            }
+
+            // Initial preview update
+            updateTotalRoutesPreview();
+        }
+
+        function generateParallelRoutesForAll() {
+            if (state.routes.length === 0) {
+                alert('No routes to generate parallel routes from. Please add or load routes first.');
+                return;
+            }
+
+            const numRoutes = parseInt(document.getElementById('numParallelRoutes').value) || 1;
+            const horizontalInputs = document.querySelectorAll('.horizontal-offset-input');
+            const verticalInputs = document.querySelectorAll('.vertical-offset-input');
+            const deleteOriginal = document.getElementById('deleteOriginalRoutes').checked;
+
+            // Validate we have enough offset inputs
+            if (horizontalInputs.length === 0 && verticalInputs.length === 0) {
+                alert('Please add at least one offset value.');
+                return;
+            }
+
+            // Get the offset values (can be positive or negative)
+            const horizontalOffsets = Array.from(horizontalInputs).map(input => parseFloat(input.value) || 0);
+            const verticalOffsets = Array.from(verticalInputs).map(input => parseFloat(input.value) || 0);
+
+            // Determine number of parallel routes to create per original route
+            const numParallelsPerRoute = Math.max(horizontalOffsets.length, verticalOffsets.length);
+
+            // Generate parallel routes for each existing route
+            const originalRouteIds = state.routes.map(r => r.id);
+            const originalRouteCount = originalRouteIds.length;
+            let routesCreatedCount = 0;
+            
+            originalRouteIds.forEach(routeId => {
+                const route = state.routes.find(r => r.id === routeId);
+                if (!route || route.waypoints.length < 2) return;
+
+                // For each set of offsets, create one parallel route with both offsets applied
+                for (let i = 0; i < numParallelsPerRoute; i++) {
+                    const horizontalOffset = horizontalOffsets[i] || 0;
+                    const verticalOffset = verticalOffsets[i] || 0;
+
+                    // Skip only if both offsets are zero
+                    if (horizontalOffset === 0 && verticalOffset === 0) continue;
+
+                    // Create a new route with both offsets applied
+                    let parallelWaypoints = [...route.waypoints];
+
+                    // Apply horizontal offset first (if any) - works with positive and negative values
+                    if (horizontalOffset !== 0) {
+                        const waypoints3D = route.waypoints.map(wp => 
+                            latLonToXYZ(wp.lat, wp.lon, 0)
+                        );
+
+                        const offsetLines = [];
+                        for (let j = 0; j < waypoints3D.length - 1; j++) {
+                            const p0 = waypoints3D[j];
+                            const p1 = waypoints3D[j + 1];
+                            
+                            let dirX = p1.x - p0.x;
+                            let dirZ = p1.z - p0.z;
+                            const mag = Math.sqrt(dirX * dirX + dirZ * dirZ);
+                            
+                            if (mag > 0.0001) {
+                                dirX /= mag;
+                                dirZ /= mag;
+                                
+                                const perpX = dirZ;
+                                const perpZ = -dirX;
+                                
+                                const offsetP0 = {
+                                    x: p0.x + perpX * horizontalOffset,
+                                    z: p0.z + perpZ * horizontalOffset
+                                };
+                                
+                                offsetLines.push({
+                                    point: offsetP0,
+                                    direction: { x: dirX, z: dirZ }
+                                });
+                            }
+                        }
+
+                        const offsetWaypoints3D = [];
+                        offsetWaypoints3D.push(waypoints3D[0]);
+                        
+                        if (offsetLines.length === 0) {
+                            offsetWaypoints3D.push(waypoints3D[waypoints3D.length - 1]);
+                        } else if (offsetLines.length === 1) {
+                            const line = offsetLines[0];
+                            const edgeLen = Math.sqrt(
+                                Math.pow(waypoints3D[1].x - waypoints3D[0].x, 2) +
+                                Math.pow(waypoints3D[1].z - waypoints3D[0].z, 2)
+                            );
+                            
+                            offsetWaypoints3D.push({
+                                x: line.point.x + edgeLen * line.direction.x,
+                                z: line.point.z + edgeLen * line.direction.z
+                            });
+                            offsetWaypoints3D.push(waypoints3D[waypoints3D.length - 1]);
+                        } else {
+                            for (let j = 1; j < offsetLines.length; j++) {
+                                const line1 = offsetLines[j - 1];
+                                const line2 = offsetLines[j];
+                                
+                                const dx = line2.point.x - line1.point.x;
+                                const dz = line2.point.z - line1.point.z;
+                                
+                                const det = line1.direction.x * line2.direction.z - 
+                                           line1.direction.z * line2.direction.x;
+                                
+                                if (Math.abs(det) > 0.0001) {
+                                    const t = (dx * line2.direction.z - dz * line2.direction.x) / det;
+                                    const intersection = {
+                                        x: line1.point.x + t * line1.direction.x,
+                                        z: line1.point.z + t * line1.direction.z
+                                    };
+                                    offsetWaypoints3D.push(intersection);
+                                }
+                            }
+                            
+                            offsetWaypoints3D.push(waypoints3D[waypoints3D.length - 1]);
+                        }
+
+                        // Convert back to lat/lon
+                        const centerLat = -23.55;
+                        const centerLon = -46.63;
+                        const scale = 100000;
+
+                        parallelWaypoints = offsetWaypoints3D.map((pos, idx) => {
+                            const newLon = centerLon + pos.x / (scale * Math.cos(centerLat * Math.PI / 180));
+                            const newLat = centerLat - pos.z / scale;
+                            const originalWaypoint = route.waypoints[idx];
+                            const altitude = originalWaypoint ? (originalWaypoint.altitude || 1219) : 1219;
+                            const width = originalWaypoint && originalWaypoint.width ? originalWaypoint.width : 457;
+                            const height = originalWaypoint && originalWaypoint.height ? originalWaypoint.height : 305;
+                            const name = originalWaypoint ? (originalWaypoint.name || `WP ${idx + 1}`) : `WP ${idx + 1}`;
+                            const type = originalWaypoint ? (originalWaypoint.type || 'Waypoint') : 'Waypoint';
+
+                            return {
+                                name: name,
+                                lat: newLat,
+                                lon: newLon,
+                                altitude: altitude,
+                                width: width,
+                                height: height,
+                                type: type
+                            };
+                        });
+                    }
+
+                    // Apply vertical offset (to the waypoints we have, whether horizontally offset or not)
+                    if (verticalOffset !== 0) {
+                        parallelWaypoints = parallelWaypoints.map((wp, idx) => {
+                            // Keep start and end waypoints at original altitude
+                            if (idx === 0 || idx === parallelWaypoints.length - 1) {
+                                return { ...wp };
+                            }
+                            return {
+                                ...wp,
+                                altitude: (wp.altitude || 1219) + verticalOffset
+                            };
+                        });
+                    }
+
+                    // Create the new parallel route
+                    const color = {
+                        r: Math.floor(Math.random() * 256),
+                        g: Math.floor(Math.random() * 256),
+                        b: Math.floor(Math.random() * 256)
+                    };
+
+                    const parallelCount = state.routes.filter(r => 
+                        r.name.startsWith(`${route.name} (Parallel`)
+                    ).length + 1;
+
+                    const newRoute = {
+                        ...route,
+                        id: `route-${Date.now()}-${i}`,
+                        name: `${route.name} (Parallel ${parallelCount})`,
+                        waypoints: parallelWaypoints,
+                        color: new THREE.Color(color.r / 255, color.g / 255, color.b / 255)
+                    };
+
+                    state.routes.push(newRoute);
+                    routesCreatedCount++;
+                }
+            });
+
+            // Delete original routes if requested
+            if (deleteOriginal) {
+                originalRouteIds.forEach(routeId => {
+                    state.routes = state.routes.filter(r => r.id !== routeId);
+                });
+            }
+
+            // Clear selection and update UI
+            state.selectedRouteId = null;
+            updateUI();
+            closeBatchParallelModal();
+            alert(`Successfully generated ${routesCreatedCount} parallel routes!${deleteOriginal ? ' Original routes deleted.' : ''}`);
+        }
+
+        // Initialize
+        initThreeJS();
+        updateUI();
+
+        // Batch parallel routes modal event listeners
+        document.getElementById('batchParallelBtn').addEventListener('click', openBatchParallelModal);
+        document.getElementById('closeBatchModal').addEventListener('click', closeBatchParallelModal);
+        document.getElementById('cancelBatchBtn').addEventListener('click', closeBatchParallelModal);
+        document.getElementById('submitBatchBtn').addEventListener('click', generateParallelRoutesForAll);
+        document.getElementById('numParallelRoutes').addEventListener('change', updateBatchModalFields);
+        
+        // Close modal when clicking outside of it
+        document.getElementById('batchParallelModal').addEventListener('click', (e) => {
+            if (e.target.id === 'batchParallelModal') {
+                closeBatchParallelModal();
+            }
+        });
+    </script>
+</body>
+</html>
